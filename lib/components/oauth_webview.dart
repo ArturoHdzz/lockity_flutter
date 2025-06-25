@@ -1,0 +1,96 @@
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:lockity_flutter/services/oauth_service.dart';
+
+class OAuthWebView extends StatefulWidget {
+  final String authUrl;
+  final Function(Map<String, dynamic>) onSuccess;
+  final Function(String) onError;
+
+  const OAuthWebView({
+    super.key,
+    required this.authUrl,
+    required this.onSuccess,
+    required this.onError,
+  });
+
+  @override
+  State<OAuthWebView> createState() => _OAuthWebViewState();
+}
+
+class _OAuthWebViewState extends State<OAuthWebView> {
+  late WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            if (request.url.startsWith('myapp://')) {
+              _handleDeepLink(request.url);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.authUrl));
+  }
+
+  void _handleDeepLink(String url) {
+    try {
+      final uri = Uri.parse(url);
+      
+      if (url.startsWith('myapp://alo/home')) {
+        final code = uri.queryParameters['code'];
+        final state = uri.queryParameters['state'];
+        final error = uri.queryParameters['error'];
+        
+        if (error != null) {
+          widget.onError('Authorization error: $error');
+          return;
+        }
+        
+        if (code != null && state != null) {
+          _exchangeCodeForTokens(code, state);
+        } else {
+          widget.onError('Invalid OAuth callback: missing parameters');
+        }
+      } else {
+        widget.onError('Unexpected deep link: $url');
+      }
+    } catch (e) {
+      widget.onError('Failed to process callback: $e');
+    }
+  }
+
+  Future<void> _exchangeCodeForTokens(String code, String state) async {
+    try {
+      final tokens = await OAuthService.exchangeCodeForTokens(code, state);
+      
+      if (tokens != null) {
+        widget.onSuccess(tokens);
+      } else {
+        widget.onError('Failed to exchange code for tokens');
+      }
+    } catch (e) {
+      widget.onError('Token exchange failed: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sign In', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF2E2D2D),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: WebViewWidget(controller: _controller),
+    );
+  }
+}
