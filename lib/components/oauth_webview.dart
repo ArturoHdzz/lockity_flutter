@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
+import 'package:lockity_flutter/screens/loading_screen.dart';
 
 class OAuthWebView extends StatefulWidget {
   final String authUrl;
@@ -20,6 +21,8 @@ class OAuthWebView extends StatefulWidget {
 
 class _OAuthWebViewState extends State<OAuthWebView> {
   late WebViewController _controller;
+  bool _isLoading = true;
+  bool _isExchangingTokens = false;
 
   @override
   void initState() {
@@ -29,6 +32,16 @@ class _OAuthWebViewState extends State<OAuthWebView> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageStarted: (String url) {
+            setState(() {
+              _isLoading = true;
+            });
+          },
+          onPageFinished: (String url) {
+            setState(() {
+              _isLoading = false;
+            });
+          },
           onNavigationRequest: (NavigationRequest request) {
             if (request.url.startsWith('myapp://')) {
               _handleDeepLink(request.url);
@@ -69,6 +82,10 @@ class _OAuthWebViewState extends State<OAuthWebView> {
   }
 
   Future<void> _exchangeCodeForTokens(String code, String state) async {
+    setState(() {
+      _isExchangingTokens = true;
+    });
+
     try {
       final tokens = await OAuthService.exchangeCodeForTokens(code, state);
       
@@ -79,6 +96,12 @@ class _OAuthWebViewState extends State<OAuthWebView> {
       }
     } catch (e) {
       widget.onError('Token exchange failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExchangingTokens = false;
+        });
+      }
     }
   }
 
@@ -90,7 +113,23 @@ class _OAuthWebViewState extends State<OAuthWebView> {
         backgroundColor: const Color(0xFF2E2D2D),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: WebViewWidget(controller: _controller),
+      body: Stack(
+        children: [
+          WebViewWidget(controller: _controller),
+          
+          if (_isLoading)
+            const LoadingScreen(
+              message: 'Loading authentication',
+              subtitle: 'Connecting to security server...',
+            ),
+          
+          if (_isExchangingTokens)
+            const LoadingScreen(
+              message: 'Completing authentication',
+              subtitle: 'Securing your session...',
+            ),
+        ],
+      ),
     );
   }
 }

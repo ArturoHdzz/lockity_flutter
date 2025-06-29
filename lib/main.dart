@@ -3,6 +3,7 @@ import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/screens/home_screen.dart';
+import 'package:lockity_flutter/screens/loading_screen.dart'; 
 import 'package:lockity_flutter/services/oauth_service.dart';
 
 void main() {
@@ -21,18 +22,15 @@ class MainApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.primary,
       ),
       home: FutureBuilder<bool>(
-        future: OAuthService.isAuthenticated(),
+        future: _checkAuthWithTimeout(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: AppColors.primary,
-              body: Center(
-                child: CircularProgressIndicator(color: AppColors.buttons),
-              ),
+            return const LoadingScreen(
+              message: 'Initializing Lockity',
+              subtitle: 'Verifying security credentials...',
             );
           }
           
-          // Si está autenticado, ir directo al Home
           if (snapshot.data == true) {
             return const AppScaffold(
               showDrawer: true,
@@ -40,7 +38,6 @@ class MainApp extends StatelessWidget {
             );
           }
           
-          // Si no está autenticado, mostrar pantalla de login
           return const AppScaffold(
             showDrawer: false,
             body: ActivityAuth(),
@@ -48,5 +45,14 @@ class MainApp extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<bool> _checkAuthWithTimeout() async {
+    try {
+      return await OAuthService.isAuthenticated()
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      return false;
+    }
   }
 }
