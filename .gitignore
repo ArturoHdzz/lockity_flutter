@@ -27,6 +27,7 @@ assets/config/.env
 assets/config/.env.*
 *.env
 *.env.*
+!assets/config/.env.example
 
 # Flutter/Dart/Pub related
 **/doc/api/
