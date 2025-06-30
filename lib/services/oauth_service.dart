@@ -41,10 +41,6 @@ class OAuthService {
     await prefs.setString('code_verifier', codeVerifier);
     await prefs.setString('state', state);
 
-    final baseUrl = isRegister 
-        ? '${AppConfig.baseUrl}/register' 
-        : '${AppConfig.baseUrl}/login';
-
     final params = {
       'response_type': AppConfig.responseType,
       'client_id': _clientId,
@@ -54,9 +50,11 @@ class OAuthService {
       'code_challenge': codeChallenge,
       'code_challenge_method': AppConfig.codeChallengeMethod,
       'prompt': AppConfig.oauthPrompt,
+      if (isRegister) 'action': 'register',
     };
 
-    final uri = Uri.parse(baseUrl).replace(queryParameters: params);
+    final uri = Uri.parse(AppConfig.authUrl)
+        .replace(queryParameters: params);
     
     return uri.toString();
   }
