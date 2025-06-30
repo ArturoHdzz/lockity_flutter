@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 import 'package:lockity_flutter/screens/loading_screen.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
+import 'package:lockity_flutter/core/app_colors.dart';
 
 class OAuthWebView extends StatefulWidget {
   final String authUrl;
@@ -109,9 +111,12 @@ class _OAuthWebViewState extends State<OAuthWebView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sign In', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF2E2D2D),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          'Sign In',
+          style: AppTextStyles.appBarTitle,
+        ),
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: AppColors.text),
       ),
       body: Stack(
         children: [
