@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -28,10 +29,7 @@ class CustomButton extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.button,
         ),
       ),
     );

@@ -3,11 +3,11 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:lockity_flutter/core/app_config.dart';
 
 class OAuthService {
-  static const String _baseUrl = 'http://localhost:8000';
-  static const String _clientId = '9f3dc21f-a7e4-4f3f-90af-e584a7c0b665';
-  static const String _redirectUri = 'myapp://alo/home';
+  static String get _clientId => AppConfig.clientId;
+  static String get _redirectUri => AppConfig.redirectUri;
 
   static String _generateCodeVerifier() {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -42,18 +42,18 @@ class OAuthService {
     await prefs.setString('state', state);
 
     final params = {
-      'response_type': 'code',
+      'response_type': AppConfig.responseType,
       'client_id': _clientId,
       'redirect_uri': _redirectUri,
-      'scope': '',
+      'scope': AppConfig.oauthScope,
       'state': state,
       'code_challenge': codeChallenge,
-      'code_challenge_method': 'S256',
-      'prompt': 'login',
+      'code_challenge_method': AppConfig.codeChallengeMethod,
+      'prompt': AppConfig.oauthPrompt,
       if (isRegister) 'action': 'register',
     };
 
-    final uri = Uri.parse('$_baseUrl/oauth/authorize')
+    final uri = Uri.parse(AppConfig.authUrl)
         .replace(queryParameters: params);
     
     return uri.toString();
@@ -74,16 +74,16 @@ class OAuthService {
       }
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/oauth/token'),
+        Uri.parse(AppConfig.tokenUrl),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
-          'grant_type': 'authorization_code',
+          'grant_type': AppConfig.grantType,
           'client_id': _clientId,
           'redirect_uri': _redirectUri,
           'code': code,
           'code_verifier': codeVerifier,
         },
-      );
+      ).timeout(Duration(seconds: AppConfig.tokenExchangeTimeout));
 
       if (response.statusCode == 200) {
         final tokens = json.decode(response.body);
@@ -121,12 +121,12 @@ class OAuthService {
       
       try {
         final response = await http.get(
-          Uri.parse('$_baseUrl/api/users/me'),
+          Uri.parse(AppConfig.userMeUrl), 
           headers: {
             'Authorization': 'Bearer $token',
             'Accept': 'application/json',
           },
-        );
+        ).timeout(Duration(seconds: AppConfig.httpTimeout)); 
         
         if (response.statusCode == 200) {
           return true;
@@ -150,13 +150,13 @@ class OAuthService {
       
       if (accessToken != null && accessToken.isNotEmpty) {
         await http.post(
-          Uri.parse('$_baseUrl/api/users/auth/logout'),
+          Uri.parse(AppConfig.logoutUrl),
           headers: {
             'Authorization': 'Bearer $accessToken',
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-        );
+        ).timeout(Duration(seconds: AppConfig.httpTimeout));
       }
       
       final keysToRemove = ['access_token', 'refresh_token', 'code_verifier', 'state'];

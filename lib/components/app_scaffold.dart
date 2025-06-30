@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/components/app_drawer.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget body;
@@ -31,11 +32,7 @@ class AppScaffold extends StatelessWidget {
       title: title != null
           ? Text(
               title!,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTextStyles.appBarTitle,
             )
           : null,
       iconTheme: const IconThemeData(color: AppColors.text),

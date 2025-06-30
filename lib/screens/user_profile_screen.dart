@@ -3,6 +3,7 @@ import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/components/custom_text_field.dart';
 import 'package:lockity_flutter/components/custom_button.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -33,8 +34,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     debugPrint('Email: ${_emailController.text}');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully'),
+      SnackBar(
+        content: Text(
+          'Profile updated successfully',
+          style: AppTextStyles.bodyMedium,
+        ),
         backgroundColor: AppColors.buttons,
       ),
     );
@@ -47,7 +51,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.background.withOpacity(0.3),
+          color: AppColors.background.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
@@ -67,7 +71,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.background.withOpacity(0.2),
+          color: AppColors.background.withValues(alpha: 0.2),
           width: 1,
         ),
       ),

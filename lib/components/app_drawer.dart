@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/screens/user_profile_screen.dart';
 import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
@@ -81,11 +82,7 @@ class AppDrawer extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: TextStyle(
-          color: isLogout ? AppColors.buttons : AppColors.text,
-          fontSize: 18,
-          fontWeight: FontWeight.w400,
-        ),
+        style: isLogout ? AppTextStyles.menuItemLogout : AppTextStyles.menuItem,
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -107,10 +104,8 @@ class AppDrawer extends StatelessWidget {
 Future<void> _handleLogout(BuildContext context) async {
   Navigator.of(context).pop();
   
-  // Cerrar sesión y limpiar tokens
   await OAuthService.logout();
   
-  // Navegar a pantalla de autenticación correctamente
   if (context.mounted) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(

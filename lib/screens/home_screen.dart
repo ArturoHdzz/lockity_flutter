@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         'Welcome to Home Screen',
-        style: TextStyle(
-          color: AppColors.text,
-          fontSize: 24,
-          fontWeight: FontWeight.w500,
-        ),
+        style: AppTextStyles.headingSmall,
       ),
     );
   }

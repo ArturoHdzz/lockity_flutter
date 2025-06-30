@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class CustomTextField extends StatelessWidget {
   final String hintText;
@@ -23,29 +24,23 @@ class CustomTextField extends StatelessWidget {
         controller: controller,
         keyboardType: keyboardType,
         obscureText: obscureText,
-        style: const TextStyle(
-          color: AppColors.text,
-          fontSize: 16,
-        ),
+        style: AppTextStyles.textField,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(
-            color: AppColors.background.withOpacity(0.7),
-            fontSize: 16,
-          ),
+          hintStyle: AppTextStyles.hintText,
           filled: true,
           fillColor: Colors.transparent,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: AppColors.background.withOpacity(0.3),
+              color: AppColors.background.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: AppColors.background.withOpacity(0.3),
+              color: AppColors.background.withValues(alpha: 0.3),
               width: 1,
             ),
           ),

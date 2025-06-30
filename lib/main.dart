@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_config.dart'; 
 import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/screens/home_screen.dart';
-import 'package:lockity_flutter/screens/loading_screen.dart'; 
+import 'package:lockity_flutter/screens/loading_screen.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await AppConfig.load();
+  
   runApp(const MainApp());
 }
 
@@ -16,10 +22,18 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Lockity',
+      title: AppConfig.appName,
       theme: ThemeData(
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.primary,
+        textTheme: GoogleFonts.interTextTheme(),
+        appBarTheme: AppBarTheme(
+          titleTextStyle: GoogleFonts.roboto(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: AppColors.text,
+          ),
+        ),
       ),
       home: FutureBuilder<bool>(
         future: _checkAuthWithTimeout(),
@@ -50,7 +64,7 @@ class MainApp extends StatelessWidget {
   Future<bool> _checkAuthWithTimeout() async {
     try {
       return await OAuthService.isAuthenticated()
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: AppConfig.authTimeout));
     } catch (e) {
       return false;
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class DividerWithText extends StatelessWidget {
   final String text;
@@ -16,24 +17,20 @@ return Row(
         Expanded(
           child: Container(
             height: 1,
-            color: AppColors.background.withOpacity(0.5),
+            color: AppColors.background.withValues(alpha: 0.5),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             text,
-            style: const TextStyle(
-              color: AppColors.background,
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-            ),
+            style: AppTextStyles.dividerText,
           ),
         ),
         Expanded(
           child: Container(
             height: 1,
-            color: AppColors.background.withOpacity(0.5),
+            color: AppColors.background.withValues(alpha: 0.5),
           ),
         ),
       ],

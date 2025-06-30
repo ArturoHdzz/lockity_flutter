@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_icons.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 
 class LoadingScreen extends StatelessWidget {
   final String? message;
@@ -35,10 +37,11 @@ class LoadingScreen extends StatelessWidget {
   }
 
   Widget _buildLogo() {
-    return const Icon(
-      Icons.fingerprint,
-      size: 80,
-      color: AppColors.background,
+    return Image.asset(
+      AppIcons.logo,
+      width: 80,
+      height: 80,
+      fit: BoxFit.contain,
     );
   }
 
@@ -56,12 +59,7 @@ class LoadingScreen extends StatelessWidget {
   Widget _buildMainMessage() {
     return Text(
       message ?? 'Loading Lockity...',
-      style: const TextStyle(
-        color: AppColors.text,
-        fontSize: 18,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
-      ),
+      style: AppTextStyles.bodyLarge,
       textAlign: TextAlign.center,
     );
   }
@@ -69,11 +67,7 @@ class LoadingScreen extends StatelessWidget {
   Widget _buildSubtitle() {
     return Text(
       subtitle!,
-      style: TextStyle(
-        color: AppColors.background.withOpacity(0.8),
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-      ),
+      style: AppTextStyles.subtitle,
       textAlign: TextAlign.center,
     );
   }

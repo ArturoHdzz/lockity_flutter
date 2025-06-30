@@ -4,7 +4,7 @@ class AppIcons {
   static const String lockWithFingerprint = '${_basePath}lock_fingerprint.svg';
   static const String fingerprint = '${_basePath}fingerprint.svg';
   static const String lock = '${_basePath}lock.svg';
-  static const String logo = '${_basePath}Logo.png';
+  static const String logo = '${_basePath}Logos.png';
   
   static const String home = '${_basePath}home.svg';
   static const String settings = '${_basePath}settings.svg';

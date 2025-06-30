@@ -4,6 +4,8 @@ import 'package:lockity_flutter/components/divider_with_text.dart';
 import 'package:lockity_flutter/components/oauth_webview.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
+import 'package:lockity_flutter/core/app_icons.dart';
+import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/screens/home_screen.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 
@@ -105,31 +107,22 @@ class _ActivityAuthState extends State<ActivityAuth> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.fingerprint,
-            size: 120,
-            color: AppColors.background,
+          Image.asset(
+            AppIcons.logo,
+            width: 120,
+            height: 120,
+            fit: BoxFit.contain,
           ),
           const SizedBox(height: 60),
-          const Text(
+          Text(
             'Hello',
-            style: TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.w300,
-              color: AppColors.text,
-              letterSpacing: 1.2,
-            ),
+            style: AppTextStyles.headingLarge,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Get Started',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w400,
-              color: AppColors.background,
-              letterSpacing: 1.0,
-            ),
+            style: AppTextStyles.headingMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 80),
