@@ -3,6 +3,9 @@ import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/screens/user_profile_screen.dart';
 import 'package:lockity_flutter/screens/activity_auth.dart';
+import 'package:lockity_flutter/screens/home_screen.dart';
+import 'package:lockity_flutter/screens/my_lockers_screen.dart';
+import 'package:lockity_flutter/screens/record_screen.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 
@@ -21,7 +24,7 @@ class AppDrawer extends StatelessWidget {
           _buildMenuItem(
             icon: Icons.home_outlined,
             title: 'Home',
-            onTap: () => _navigateTo(context, '/home'),
+            onTap: () => _navigateToHome(context),
           ),
           _buildMenuItem(
             icon: Icons.person_outline,
@@ -31,12 +34,12 @@ class AppDrawer extends StatelessWidget {
           _buildMenuItem(
             icon: Icons.shield_outlined,
             title: 'My Lockers',
-            onTap: () => _navigateTo(context, '/lockers'),
+            onTap: () => _navigateToMyLockers(context),
           ),
           _buildMenuItem(
             icon: Icons.notifications_outlined,
             title: 'Record',
-            onTap: () => _navigateTo(context, '/record'),
+            onTap: () => _navigateToRecord(context),
           ),
           const Spacer(),
           _buildMenuItem(
@@ -89,33 +92,66 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  void _navigateTo(BuildContext context, String route) {
+  void _navigateToHome(BuildContext context) {
     Navigator.of(context).pop();
-    debugPrint('Navigate to: $route');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const AppScaffold(
+          showDrawer: true,
+          body: HomeScreen(),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToMyLockers(BuildContext context) {
+    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const AppScaffold(
+          showDrawer: true,
+          body: MyLockersScreen(),
+        ),
+      ),
+    );
   }
 
   void _navigateToProfile(BuildContext context) {
     Navigator.of(context).pop();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const UserProfileScreen()),
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const UserProfileScreen(),
+      ),
     );
   }
 
-Future<void> _handleLogout(BuildContext context) async {
-  Navigator.of(context).pop();
-  
-  await OAuthService.logout();
-  
-  if (context.mounted) {
-    Navigator.of(context).pushAndRemoveUntil(
+  void _navigateToRecord(BuildContext context) {
+    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => const AppScaffold(
-          showDrawer: false,
-          body: ActivityAuth(),
+          showDrawer: true,
+          body: RecordScreen(),
         ),
       ),
-      (route) => false,
     );
   }
-}
+
+  Future<void> _handleLogout(BuildContext context) async {
+    Navigator.of(context).pop();
+    
+    await OAuthService.logout();
+    
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const AppScaffold(
+            showDrawer: false,
+            body: ActivityAuth(),
+          ),
+        ),
+        (route) => false,
+      );
+    }
+  }
 }
