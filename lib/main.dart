@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
+import 'package:lockity_flutter/components/connectivity_wrapper.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/core/app_config.dart'; 
 import 'package:lockity_flutter/screens/activity_auth.dart';
@@ -35,28 +36,30 @@ class MainApp extends StatelessWidget {
           ),
         ),
       ),
-      home: FutureBuilder<bool>(
-        future: _checkAuthWithTimeout(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingScreen(
-              message: 'Initializing Lockity',
-              subtitle: 'Verifying security credentials...',
-            );
-          }
-          
-          if (snapshot.data == true) {
+      home: ConnectivityWrapper(
+        child: FutureBuilder<bool>(
+          future: _checkAuthWithTimeout(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingScreen(
+                message: 'Initializing Lockity',
+                subtitle: 'Verifying security credentials...',
+              );
+            }
+            
+            if (snapshot.data == true) {
+              return const AppScaffold(
+                showDrawer: true,
+                body: HomeScreen(),
+              );
+            }
+            
             return const AppScaffold(
-              showDrawer: true,
-              body: HomeScreen(),
+              showDrawer: false,
+              body: ActivityAuth(),
             );
-          }
-          
-          return const AppScaffold(
-            showDrawer: false,
-            body: ActivityAuth(),
-          );
-        },
+          },
+        ),
       ),
     );
   }

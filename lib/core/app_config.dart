@@ -5,11 +5,15 @@ class AppConfig {
   static String get clientId => dotenv.env['CLIENT_ID'] ?? '';
   static String get redirectUri => dotenv.env['REDIRECT_URI'] ?? '';
   
+  static String get loginEndpoint => dotenv.env['LOGIN_ENDPOINT'] ?? '';
+  static String get registerEndpoint => dotenv.env['REGISTER_ENDPOINT'] ?? '';
   static String get authEndpoint => dotenv.env['AUTH_ENDPOINT'] ?? '';
   static String get tokenEndpoint => dotenv.env['TOKEN_ENDPOINT'] ?? '';
   static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '';
   static String get logoutEndpoint => dotenv.env['LOGOUT_ENDPOINT'] ?? '';
   
+  static String get loginUrl => '$baseUrl$loginEndpoint';
+  static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get authUrl => '$baseUrl$authEndpoint';
   static String get tokenUrl => '$baseUrl$tokenEndpoint';
   static String get userMeUrl => '$baseUrl$userMeEndpoint';

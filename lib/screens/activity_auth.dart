@@ -56,6 +56,7 @@ class _ActivityAuthState extends State<ActivityAuth> {
               authUrl: authUrl,
               onSuccess: _onOAuthSuccess,
               onError: _onOAuthError,
+              isRegister: isRegister,
             ),
           ),
         );

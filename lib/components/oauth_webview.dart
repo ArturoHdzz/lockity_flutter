@@ -9,12 +9,14 @@ class OAuthWebView extends StatefulWidget {
   final String authUrl;
   final Function(Map<String, dynamic>) onSuccess;
   final Function(String) onError;
+  final bool isRegister;
 
   const OAuthWebView({
     super.key,
     required this.authUrl,
     required this.onSuccess,
     required this.onError,
+    this.isRegister = false,
   });
 
   @override
@@ -25,6 +27,8 @@ class _OAuthWebViewState extends State<OAuthWebView> {
   late WebViewController _controller;
   bool _isLoading = true;
   bool _isExchangingTokens = false;
+  bool _mfaCompleted = false;
+  bool _hasRedirectedToOAuth = false;
 
   @override
   void initState() {
@@ -39,21 +43,70 @@ class _OAuthWebViewState extends State<OAuthWebView> {
               _isLoading = true;
             });
           },
-          onPageFinished: (String url) {
+          onPageFinished: (String url) async {
             setState(() {
               _isLoading = false;
             });
+            
+            if (url.contains('/code') && !_mfaCompleted) {
+            }
+            
+            if (url.contains('/oauth/authorize') && !_mfaCompleted && !_hasRedirectedToOAuth) {
+              _mfaCompleted = true;
+              _hasRedirectedToOAuth = true;
+              await _redirectToOAuthWithParams();
+              return;
+            }
+            
+            if (url.contains('error=') || url.contains('Oops')) {
+              widget.onError('OAuth authorization failed. Please try again.');
+            }
+            
+            if (url.contains('/login') && _mfaCompleted && !url.contains('error')) {
+              _hasRedirectedToOAuth = false;
+              await Future.delayed(const Duration(seconds: 1));
+              await _redirectToOAuthWithParams();
+            }
           },
           onNavigationRequest: (NavigationRequest request) {
+            if (request.url.contains('/oauth/authorize') && !_hasRedirectedToOAuth) {
+              final uri = Uri.parse(request.url);
+              if (!uri.queryParameters.containsKey('client_id')) {
+                _mfaCompleted = true;
+                _hasRedirectedToOAuth = true;
+                
+                Future.delayed(const Duration(milliseconds: 500), () async {
+                  await _redirectToOAuthWithParams();
+                });
+                
+                return NavigationDecision.prevent;
+              }
+            }
+            
             if (request.url.startsWith('myapp://')) {
               _handleDeepLink(request.url);
               return NavigationDecision.prevent;
             }
+            
             return NavigationDecision.navigate;
           },
         ),
       )
       ..loadRequest(Uri.parse(widget.authUrl));
+  }
+
+  Future<void> _redirectToOAuthWithParams() async {
+    try {
+      final oauthUrl = await OAuthService.buildOAuthUrl();
+      
+      setState(() {
+        _isLoading = true;
+      });
+      
+      await _controller.loadRequest(Uri.parse(oauthUrl));
+    } catch (e) {
+      widget.onError('Failed to redirect to OAuth: $e');
+    }
   }
 
   void _handleDeepLink(String url) {
@@ -73,7 +126,7 @@ class _OAuthWebViewState extends State<OAuthWebView> {
         if (code != null && state != null) {
           _exchangeCodeForTokens(code, state);
         } else {
-          widget.onError('Invalid OAuth callback: missing parameters');
+          widget.onError('Invalid OAuth callback: missing code or state');
         }
       } else {
         widget.onError('Unexpected deep link: $url');
@@ -112,11 +165,17 @@ class _OAuthWebViewState extends State<OAuthWebView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Sign In',
+          widget.isRegister ? 'Sign Up' : 'Sign In',
           style: AppTextStyles.appBarTitle,
         ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: AppColors.text),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
       body: Stack(
         children: [
