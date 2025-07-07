@@ -19,25 +19,12 @@ class _RecordScreenState extends State<RecordScreen> {
     'User Activity',
   ];
 
-  String? _selectedDescription1;
   String? _selectedDescription2;
 
   @override
   void initState() {
     super.initState();
-    _selectedDescription1 = _descriptions.first;
     _selectedDescription2 = _descriptions.first;
-  }
-
-  void _handleSearch() {
-    if (_selectedDescription1 != null && _selectedDescription2 != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Searching records for: $_selectedDescription1 and $_selectedDescription2'),
-          backgroundColor: AppColors.buttons,
-        ),
-      );
-    }
   }
 
   @override
@@ -57,17 +44,6 @@ class _RecordScreenState extends State<RecordScreen> {
           ),
           const SizedBox(height: 40),
           CustomDropdown(
-            value: _selectedDescription1,
-            items: _descriptions,
-            hint: 'Select Description',
-            onChanged: (newValue) {
-              setState(() {
-                _selectedDescription1 = newValue;
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          CustomDropdown(
             value: _selectedDescription2,
             items: _descriptions,
             hint: 'Select Description',
@@ -77,7 +53,7 @@ class _RecordScreenState extends State<RecordScreen> {
               });
             },
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
           Expanded(
             child: Container(
               width: double.infinity,

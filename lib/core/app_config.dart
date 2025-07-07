@@ -11,6 +11,7 @@ class AppConfig {
   static String get tokenEndpoint => dotenv.env['TOKEN_ENDPOINT'] ?? '';
   static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '';
   static String get logoutEndpoint => dotenv.env['LOGOUT_ENDPOINT'] ?? '';
+  static String get webLogoutEndpoint => dotenv.env['WEB_LOGOUT_ENDPOINT'] ?? '';
   
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
@@ -18,6 +19,7 @@ class AppConfig {
   static String get tokenUrl => '$baseUrl$tokenEndpoint';
   static String get userMeUrl => '$baseUrl$userMeEndpoint';
   static String get logoutUrl => '$baseUrl$logoutEndpoint';
+  static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
   
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';
@@ -28,9 +30,9 @@ class AppConfig {
   static String get appName => dotenv.env['APP_NAME'] ?? '';
   static bool get debugMode => dotenv.env['DEBUG_MODE'] == 'true';
   
-  static int get authTimeout => int.tryParse(dotenv.env['AUTH_TIMEOUT'] ?? '') ?? 5;
-  static int get httpTimeout => int.tryParse(dotenv.env['HTTP_TIMEOUT'] ?? '') ?? 10;
-  static int get tokenExchangeTimeout => int.tryParse(dotenv.env['TOKEN_EXCHANGE_TIMEOUT'] ?? '') ?? 10;
+  static int get authTimeout => int.tryParse(dotenv.env['AUTH_TIMEOUT'] ?? '') ?? 30;
+  static int get httpTimeout => int.tryParse(dotenv.env['HTTP_TIMEOUT'] ?? '') ?? 45;
+  static int get tokenExchangeTimeout => int.tryParse(dotenv.env['TOKEN_EXCHANGE_TIMEOUT'] ?? '') ?? 60;
   
   static Future<void> load() async {
     await dotenv.load(fileName: "assets/config/.env");

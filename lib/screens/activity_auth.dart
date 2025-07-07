@@ -10,7 +10,12 @@ import 'package:lockity_flutter/screens/home_screen.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 
 class ActivityAuth extends StatefulWidget {
-  const ActivityAuth({super.key});
+  final bool showRegistrationSuccess;
+  
+  const ActivityAuth({
+    super.key,
+    this.showRegistrationSuccess = false, 
+  });
 
   @override
   State<ActivityAuth> createState() => _ActivityAuthState();
@@ -22,14 +27,85 @@ class _ActivityAuthState extends State<ActivityAuth> {
   @override
   void initState() {
     super.initState();
-    _checkExistingAuth();
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    try {
+      await OAuthService.clearAllData();
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      if (widget.showRegistrationSuccess) {
+        _showRegistrationSuccessMessage();
+      }
+      
+      await _checkExistingAuth();
+    } catch (e) {
+      // 
+    }
+  }
+
+  void _showRegistrationSuccessMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Account Created Successfully!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'You can now sign in with your credentials',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _checkExistingAuth() async {
-    final isAuthenticated = await OAuthService.isAuthenticated();
-    
-    if (isAuthenticated && mounted) {
-      _navigateToHome();
+    try {
+      final isAuthenticated = await OAuthService.isAuthenticated();
+      
+      if (isAuthenticated && mounted) {
+        _navigateToHome();
+      }
+    } catch (e) {
+      // 
     }
   }
 
@@ -43,11 +119,12 @@ class _ActivityAuthState extends State<ActivityAuth> {
 
   Future<void> _startOAuthFlow({required bool isRegister}) async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
 
-      final authUrl = await OAuthService.buildAuthUrl(isRegister: isRegister);
+      await OAuthService.clearAllData();
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final authUrl = await OAuthService.buildAuthorizationUrl(isRegister: isRegister);
       
       if (mounted) {
         Navigator.of(context).push(
@@ -56,6 +133,7 @@ class _ActivityAuthState extends State<ActivityAuth> {
               authUrl: authUrl,
               onSuccess: _onOAuthSuccess,
               onError: _onOAuthError,
+              onRegistrationSuccess: isRegister ? _onRegistrationSuccess : null,
               isRegister: isRegister,
             ),
           ),
@@ -65,40 +143,58 @@ class _ActivityAuthState extends State<ActivityAuth> {
       _onOAuthError('Failed to start OAuth flow: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  void _onOAuthSuccess(Map<String, dynamic> tokens) {
-    Navigator.of(context).pop();
-    _navigateToHome();
+  void _onOAuthSuccess(AuthToken token) {
+    if (mounted) {
+      Navigator.of(context).pop();
+      _navigateToHome();
+    }
   }
 
   void _onOAuthError(String error) {
-    Navigator.of(context).pop();
-    
     if (mounted) {
+      Navigator.of(context).pop();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Authentication failed: $error'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  void _onRegistrationSuccess() {
+    if (mounted) {
+      Navigator.of(context).pop(); 
+      
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AppScaffold(
+            showDrawer: false,
+            body: ActivityAuth(showRegistrationSuccess: true),
+          ),
         ),
       );
     }
   }
 
   void _navigateToHome() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const AppScaffold(
-          showDrawer: true,
-          body: HomeScreen(),
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AppScaffold(
+            showDrawer: true,
+            body: HomeScreen(),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -128,7 +224,16 @@ class _ActivityAuthState extends State<ActivityAuth> {
           ),
           const SizedBox(height: 80),
           _isLoading
-              ? const CircularProgressIndicator(color: AppColors.buttons)
+              ? const Column(
+                  children: [
+                    CircularProgressIndicator(color: AppColors.buttons),
+                    SizedBox(height: 16),
+                    Text(
+                      'Setting up authentication...',
+                      style: TextStyle(color: AppColors.text),
+                    ),
+                  ],
+                )
               : Column(
                   children: [
                     CustomButton(
