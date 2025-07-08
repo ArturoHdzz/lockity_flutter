@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
@@ -12,7 +15,8 @@ class AppConfig {
   static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '/api/users/me';
   static String get logoutEndpoint => dotenv.env['LOGOUT_ENDPOINT'] ?? '';
   static String get webLogoutEndpoint => dotenv.env['WEB_LOGOUT_ENDPOINT'] ?? '';
-    static String get auditLogsEndpoint => dotenv.env['AUDIT_LOGS_ENDPOINT'] ?? '/api/audit-logs';
+  static String get auditLogsEndpoint => dotenv.env['AUDIT_LOGS_ENDPOINT'] ?? '/api/audit-logs';
+  static String get lockersEndpoint => dotenv.env['LOCKERS_ENDPOINT'] ?? '/api/lockers';
   
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
@@ -21,7 +25,8 @@ class AppConfig {
   static String get userMeUrl => '$baseUrl$userMeEndpoint';
   static String get logoutUrl => '$baseUrl$logoutEndpoint';
   static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
-    static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
+  static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
+  static String get lockersUrl => '$baseUrl$lockersEndpoint';
   
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';
@@ -40,5 +45,18 @@ class AppConfig {
     await dotenv.load(fileName: "assets/config/.env");
   }
 
+  static String get mqttBrokerHost => dotenv.env['MQTT_BROKER_HOST'] ?? '64.23.237.187';
+  static int get mqttBrokerPort => int.tryParse(dotenv.env['MQTT_BROKER_PORT'] ?? '') ?? 8883;
+  static String get mqttClientId => dotenv.env['MQTT_CLIENT_ID'] ?? 'lockity_flutter_client';
+  static String get mqttUsername => dotenv.env['MQTT_USERNAME'] ?? 'esp32';
+  static String get mqttPassword {
+    // ASEGURAR que se procese correctamente el password escapado
+    final password = dotenv.env['MQTT_PASSWORD'] ?? '';
+    debugPrint('🔐 CONFIG: MQTT Password length: ${password.length}');
+    debugPrint('🔐 CONFIG: MQTT Password starts with: ${password.substring(0, min(10, password.length))}...');
+    return password;
+  }
+  
   static bool get useMockAuditLogs => dotenv.env['USE_MOCK_AUDIT_LOGS'] == 'true';
+  static bool get useMockLockers => dotenv.env['USE_MOCK_LOCKERS'] == 'true';
 }
