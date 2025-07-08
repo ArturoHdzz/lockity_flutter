@@ -12,6 +12,7 @@ class AppConfig {
   static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '/api/users/me';
   static String get logoutEndpoint => dotenv.env['LOGOUT_ENDPOINT'] ?? '';
   static String get webLogoutEndpoint => dotenv.env['WEB_LOGOUT_ENDPOINT'] ?? '';
+    static String get auditLogsEndpoint => dotenv.env['AUDIT_LOGS_ENDPOINT'] ?? '/api/audit-logs';
   
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
@@ -20,6 +21,7 @@ class AppConfig {
   static String get userMeUrl => '$baseUrl$userMeEndpoint';
   static String get logoutUrl => '$baseUrl$logoutEndpoint';
   static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
+    static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
   
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';
