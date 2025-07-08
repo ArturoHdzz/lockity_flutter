@@ -9,7 +9,7 @@ class AppConfig {
   static String get registerEndpoint => dotenv.env['REGISTER_ENDPOINT'] ?? '';
   static String get authEndpoint => dotenv.env['AUTH_ENDPOINT'] ?? '';
   static String get tokenEndpoint => dotenv.env['TOKEN_ENDPOINT'] ?? '';
-  static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '';
+  static String get userMeEndpoint => dotenv.env['USER_ME_ENDPOINT'] ?? '/api/users/me';
   static String get logoutEndpoint => dotenv.env['LOGOUT_ENDPOINT'] ?? '';
   static String get webLogoutEndpoint => dotenv.env['WEB_LOGOUT_ENDPOINT'] ?? '';
   

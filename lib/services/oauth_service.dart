@@ -462,6 +462,10 @@ class OAuthService {
     }
   }
 
+  static Future<AuthToken?> getStoredToken() async {
+    return await _tokenRepository.getToken();
+  }
+
   static Future<void> clearAllData() async {
     await Future.wait([
       _tokenRepository.clearToken(),
