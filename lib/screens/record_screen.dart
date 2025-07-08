@@ -7,6 +7,8 @@ import 'package:lockity_flutter/models/audit_log_request.dart';
 import 'package:lockity_flutter/providers/audit_log_provider.dart';
 import 'package:lockity_flutter/repositories/audit_log_repository_impl.dart';
 import 'package:lockity_flutter/use_cases/get_audit_logs_use_case.dart';
+import 'package:lockity_flutter/repositories/audit_log_repository_mock.dart';
+import 'package:lockity_flutter/core/app_config.dart';
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -39,8 +41,20 @@ class _RecordScreenState extends State<RecordScreen> {
     _loadAuditLogs();
   }
 
+  // void _initializeProvider() {
+  //   final repository = AuditLogRepositoryImpl();
+  //   _provider = AuditLogProvider(
+  //     getAuditLogsUseCase: GetAuditLogsUseCase(repository),
+  //   );
+  //   _provider.addListener(_onProviderStateChanged);
+  // }
+
   void _initializeProvider() {
-    final repository = AuditLogRepositoryImpl();
+    // SWITCH SIMPLE: Mock vs Real
+    final repository = AppConfig.useMockAuditLogs 
+      ? AuditLogRepositoryMock()
+      : AuditLogRepositoryImpl();
+      
     _provider = AuditLogProvider(
       getAuditLogsUseCase: GetAuditLogsUseCase(repository),
     );

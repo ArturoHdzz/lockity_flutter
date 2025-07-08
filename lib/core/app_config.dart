@@ -39,4 +39,6 @@ class AppConfig {
   static Future<void> load() async {
     await dotenv.load(fileName: "assets/config/.env");
   }
+
+  static bool get useMockAuditLogs => dotenv.env['USE_MOCK_AUDIT_LOGS'] == 'true';
 }
