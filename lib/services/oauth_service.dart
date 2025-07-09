@@ -395,7 +395,7 @@ class OAuthService {
     }
   }
 
-  static Future<void> logout() async {
+  static Future<LogoutResult> logout() async {
     try {
       final token = await _tokenRepository.getToken();
       
@@ -413,22 +413,44 @@ class OAuthService {
             final responseData = json.decode(apiLogoutResponse.body) as Map<String, dynamic>;
             
             if (responseData['success'] == true) {
-              await _performWebLogoutWithCredentials();
+              await _clearAllLocalData();
+              
+              _performWebLogoutWithCredentials().catchError((e) {
+                // 
+              });
+              
+              return LogoutResult.success('Logged out successfully');
             }
           }
+          
+          await _performWebLogoutWithCredentials();
+          
         } catch (e) {
           await _performWebLogoutWithCredentials();
         }
       } else {
         await _performWebLogoutWithCredentials();
       }
-    } finally {
-      await Future.wait([
-        _tokenRepository.clearToken(),
-        _tokenRepository.clearOAuthState(),
-        _clearWebViewData(),
-      ]);
+      
+      await _clearAllLocalData();
+      return LogoutResult.success('Logged out successfully');
+      
+    } catch (e) {
+      try {
+        await _clearAllLocalData();
+        return LogoutResult.partialSuccess('Logged out locally, but server logout failed');
+      } catch (clearError) {
+        return LogoutResult.failure('Logout failed. Please try again or restart the app.');
+      }
     }
+  }
+
+  static Future<void> _clearAllLocalData() async {
+    await Future.wait([
+      _tokenRepository.clearToken(),
+      _tokenRepository.clearOAuthState(),
+      _clearWebViewData(),
+    ]);
   }
 
   static Future<void> _clearWebViewData() async {
@@ -500,4 +522,30 @@ class OAuthException implements Exception {
   
   @override
   String toString() => 'OAuthException: $message';
+}
+
+class LogoutResult {
+  final bool isSuccess;
+  final String message;
+  final LogoutStatus status;
+
+  const LogoutResult._(this.isSuccess, this.message, this.status);
+
+  factory LogoutResult.success(String message) {
+    return LogoutResult._(true, message, LogoutStatus.success);
+  }
+
+  factory LogoutResult.partialSuccess(String message) {
+    return LogoutResult._(true, message, LogoutStatus.partialSuccess);
+  }
+
+  factory LogoutResult.failure(String message) {
+    return LogoutResult._(false, message, LogoutStatus.failure);
+  }
+}
+
+enum LogoutStatus {
+  success,
+  partialSuccess,
+  failure,
 }

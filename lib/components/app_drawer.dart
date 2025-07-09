@@ -3,6 +3,7 @@ import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/services/navigation_service.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
+import 'package:lockity_flutter/services/notification_service.dart';
 import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 
@@ -145,12 +146,31 @@ class _LogoutButtonState extends State<_LogoutButton> {
     if (_isLoggingOut) return;
 
     setState(() => _isLoggingOut = true);
-
+    
     try {
-      Navigator.of(context).pop();
-      await _performLogoutInBackground();
+      final navigator = Navigator.of(context);
+      
+      if (mounted) {
+        navigator.pop();
+      }
+      
+      final result = await OAuthService.logout();
+      
+      if (mounted) {
+        _showLogoutNotification(result);
+        _navigateToAuth(navigator);
+      }
+      
     } catch (e) {
-      // 
+      if (mounted) {
+        NotificationService.showError(
+          context,
+          'Logout Error',
+          subtitle: 'An unexpected error occurred',
+        );
+        
+        _navigateToAuth(Navigator.of(context));
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoggingOut = false);
@@ -158,26 +178,43 @@ class _LogoutButtonState extends State<_LogoutButton> {
     }
   }
 
-  Future<void> _performLogoutInBackground() async {
-    try {
-      await OAuthService.logout();
-
-      final navigator = Navigator.of(context);
-      if (mounted) {
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const AppScaffold(
-              showDrawer: false,
-              body: ActivityAuth(showRegistrationSuccess: false),
-            ),
-          ),
-          (route) => false,
+  void _showLogoutNotification(LogoutResult result) {
+    if (result.isSuccess) {
+      if (result.status == LogoutStatus.success) {
+        NotificationService.showSuccess(
+          context,
+          'Logout Successful',
+          subtitle: 'You have been safely logged out',
+        );
+      } else if (result.status == LogoutStatus.partialSuccess) {
+        NotificationService.showWarning(
+          context,
+          'Partial Logout',
+          subtitle: 'Logged out locally, server may be unreachable',
         );
       }
+    } else {
+      NotificationService.showError(
+        context,
+        'Logout Failed',
+        subtitle: result.message,
+      );
+    }
+  }
+
+  void _navigateToAuth(NavigatorState navigator) {
+    try {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const AppScaffold(
+            showDrawer: false,
+            body: ActivityAuth(showRegistrationSuccess: false),
+          ),
+        ),
+        (route) => false,
+      );
     } catch (e) {
-      if (mounted) {
-        NavigationService.navigateToAuth(context);
-      }
+      // 
     }
   }
 }
