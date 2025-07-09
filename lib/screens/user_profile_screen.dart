@@ -220,11 +220,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         shape: BoxShape.circle,
         color: AppColors.secondary.withOpacity(0.3),
         border: Border.all(
-          color: AppColors.buttons.withOpacity(0.3),
+          color: AppColors.secondary.withOpacity(0.3),
           width: 2,
         ),
       ),
-      child: const Icon(Icons.person, size: 50, color: AppColors.buttons),
+      child: const Icon(Icons.person, size: 50, color: AppColors.secondary),
     );
   }
 
@@ -294,7 +294,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               'Edit Profile',
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w600,
-                color: AppColors.buttons,
+                color: AppColors.text,
               ),
             ),
             const SizedBox(height: 24),

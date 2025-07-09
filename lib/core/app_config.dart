@@ -26,7 +26,7 @@ class AppConfig {
   static String get logoutUrl => '$baseUrl$logoutEndpoint';
   static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
   static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
-  static String get lockersUrl => '$baseUrl$lockersEndpoint';
+  static String get lockersUrl => dotenv.env['LOCKERS_ENDPOINT'] ?? '$baseUrl/api/lockers';
   
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';
