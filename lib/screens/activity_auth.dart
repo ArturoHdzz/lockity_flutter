@@ -237,16 +237,16 @@ class _ActivityAuthState extends State<ActivityAuth> {
               : Column(
                   children: [
                     CustomButton(
-                      text: 'Sign In',
+                      text: 'Sign In / Sign Up',
                       onPressed: _handleLogin,
                     ),
-                    const SizedBox(height: 24),
-                    const DividerWithText(text: 'Or'),
-                    const SizedBox(height: 24),
-                    CustomButton(
-                      text: 'Sign Up',
-                      onPressed: _handleRegister,
-                    ),
+                    // const SizedBox(height: 24),
+                    // const DividerWithText(text: 'Or'),
+                    // const SizedBox(height: 24),
+                    // CustomButton(
+                    //   text: 'Sign Up',
+                    //   onPressed: _handleRegister,
+                    // ),
                   ],
                 ),
         ],
