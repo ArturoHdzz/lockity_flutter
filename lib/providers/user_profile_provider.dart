@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:lockity_flutter/models/user.dart';
 import 'package:lockity_flutter/models/user_update_request.dart';
@@ -19,6 +20,7 @@ class UserProfileProvider extends ChangeNotifier {
   UserProfileState _state = UserProfileState.initial;
   User? _user;
   String? _errorMessage;
+  bool _disposed = false;
 
   UserProfileState get state => _state;
   User? get user => _user;
@@ -29,16 +31,20 @@ class UserProfileProvider extends ChangeNotifier {
   bool get hasUser => _user != null;
 
   Future<void> loadUserProfile() async {
-    if (_state == UserProfileState.loading) return;
+    if (_state == UserProfileState.loading || _disposed) return;
 
     _setState(UserProfileState.loading);
     _clearError();
 
     try {
       _user = await _getCurrentUserUseCase.execute();
-      _setState(UserProfileState.loaded);
+      if (!_disposed) {
+        _setState(UserProfileState.loaded);
+      }
     } catch (e) {
-      _setError(_extractUserFriendlyMessage(e.toString()));
+      if (!_disposed) {
+        _setError(_extractUserFriendlyMessage(e.toString()));
+      }
     }
   }
 
@@ -48,7 +54,7 @@ class UserProfileProvider extends ChangeNotifier {
     required String secondLastName,
     required String email,
   }) async {
-    if (_state == UserProfileState.updating) return false;
+    if (_state == UserProfileState.updating || _disposed) return false;
 
     _setState(UserProfileState.updating);
     _clearError();
@@ -62,22 +68,29 @@ class UserProfileProvider extends ChangeNotifier {
       );
 
       _user = await _updateUserUseCase.execute(request);
-      _setState(UserProfileState.updated);
       
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_state == UserProfileState.updated) {
-          _setState(UserProfileState.loaded);
-        }
-      });
+      if (!_disposed) {
+        _setState(UserProfileState.updated);
+        
+        Timer.run(() {
+          if (!_disposed && _state == UserProfileState.updated) {
+            _setState(UserProfileState.loaded);
+          }
+        });
+      }
       
       return true;
     } catch (e) {
-      _setError(_extractUserFriendlyMessage(e.toString()));
+      if (!_disposed) {
+        _setError(_extractUserFriendlyMessage(e.toString()));
+      }
       return false;
     }
   }
 
   void clearError() {
+    if (_disposed) return;
+    
     _clearError();
     if (_state == UserProfileState.error) {
       _setState(_user != null ? UserProfileState.loaded : UserProfileState.initial);
@@ -85,6 +98,8 @@ class UserProfileProvider extends ChangeNotifier {
   }
 
   void reset() {
+    if (_disposed) return;
+    
     _user = null;
     _errorMessage = null;
     _setState(UserProfileState.initial);
@@ -98,14 +113,24 @@ class UserProfileProvider extends ChangeNotifier {
   }
 
   void _setState(UserProfileState newState) {
+    if (_disposed) return;
+    
     _state = newState;
     notifyListeners();
   }
 
   void _setError(String error) {
+    if (_disposed) return;
+    
     _errorMessage = error;
     _setState(UserProfileState.error);
   }
 
   void _clearError() => _errorMessage = null;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

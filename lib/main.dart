@@ -8,6 +8,7 @@ import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/screens/home_screen.dart';
 import 'package:lockity_flutter/screens/loading_screen.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
+import 'package:lockity_flutter/services/navigation_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,8 @@ class MainApp extends StatelessWidget {
             }
             
             if (snapshot.data == true) {
+              NavigationService.setCurrentScreen(NavigationScreen.home);
+              
               return const AppScaffold(
                 showDrawer: true,
                 body: HomeScreen(),

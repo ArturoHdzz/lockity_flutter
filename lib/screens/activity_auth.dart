@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lockity_flutter/components/custom_button.dart';
-import 'package:lockity_flutter/components/divider_with_text.dart';
 import 'package:lockity_flutter/components/oauth_webview.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
@@ -41,7 +40,7 @@ class _ActivityAuthState extends State<ActivityAuth> {
       
       await _checkExistingAuth();
     } catch (e) {
-      // 
+      //
     }
   }
 
@@ -105,7 +104,7 @@ class _ActivityAuthState extends State<ActivityAuth> {
         _navigateToHome();
       }
     } catch (e) {
-      // 
+      //
     }
   }
 
