@@ -9,7 +9,7 @@ import 'package:lockity_flutter/repositories/locker_repository_mock.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
 import 'package:lockity_flutter/use_cases/get_compartments_use_case.dart';
 import 'package:lockity_flutter/use_cases/control_locker_use_case.dart';
-import 'package:lockity_flutter/services/mqtt_service.dart';
+import 'package:lockity_flutter/services/mqtt_connection_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final LockerProvider _provider;
+  final MqttConnectionManager _mqttManager = MqttConnectionManager(); 
 
   @override
   void initState() {
@@ -31,25 +32,35 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _provider.removeListener(_onProviderStateChanged);
     _provider.dispose();
-    MqttService.disconnect();
+    _mqttManager.dispose();
     super.dispose();
   }
 
   void _initializeProvider() {
-    final repository = AppConfig.useMockLockers 
-      ? LockerRepositoryMock()
-      : LockerRepositoryImpl();
-      
+    final repository = AppConfig.useMockLockers
+        ? LockerRepositoryMock()
+        : LockerRepositoryImpl();
+
     _provider = LockerProvider(
       getLockersUseCase: GetLockersUseCase(repository),
       getCompartmentsUseCase: GetCompartmentsUseCase(repository),
       controlLockerUseCase: ControlLockerUseCase(repository),
     );
-    
+
     _provider.addListener(_onProviderStateChanged);
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _provider.loadLockers();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _provider.loadLockers();
+      if (_provider.lockers.isNotEmpty) {
+        final firstLocker = _provider.lockers.first;
+        _provider.selectLocker(firstLocker);
+        if (!AppConfig.useMockLockers) {
+          await _mqttManager.connect(
+            location: 'floor1',
+            lockerId: firstLocker.id,
+          );
+        }
+      }
     });
   }
 
@@ -159,23 +170,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildConnectionStatus() {
     final isMock = AppConfig.useMockLockers;
-    final isConnected = MqttService.isConnected;
-    final isSecure = MqttService.isSecureConnection;
-    
-    debugPrint('🏠 SCREEN: Connection status - Mock: $isMock, Connected: $isConnected, Secure: $isSecure');
-    
+    final isConnected = _mqttManager.isConnected;
+    final isConnecting = _mqttManager.isConnecting;
+
     Color statusColor;
     IconData statusIcon;
     String statusText;
-    
+
     if (isMock) {
       statusColor = Colors.orange;
       statusIcon = Icons.science;
       statusText = 'Mock Mode';
+    } else if (isConnecting) {
+      statusColor = Colors.blueGrey;
+      statusIcon = Icons.sync;
+      statusText = 'Connecting...';
     } else if (isConnected) {
-      statusColor = isSecure ? Colors.green : Colors.blue;
-      statusIcon = isSecure ? Icons.verified_user : Icons.wifi;
-      statusText = isSecure ? 'Connected (SSL)' : 'Connected (Insecure)';
+      statusColor = Colors.green;
+      statusIcon = Icons.verified_user;
+      statusText = 'Connected';
     } else {
       statusColor = Colors.red;
       statusIcon = Icons.wifi_off;
@@ -231,17 +244,16 @@ class _HomeScreenState extends State<HomeScreen> {
       value: selectedValue,
       items: lockerNames,
       hint: 'Select Locker',
-      onChanged: (newValue) {
+      onChanged: (newValue) async {
         if (newValue != null) {
           final selectedLocker = _provider.lockers.firstWhere(
             (locker) => '${locker.displayName} - ${locker.areaName}' == newValue,
           );
           _provider.selectLocker(selectedLocker);
-          
+
           if (!AppConfig.useMockLockers) {
-            // Conectar MQTT con ubicación y ID del locker
-            MqttService.connect(
-              location: 'floor1', // O usar selectedLocker.areaName
+            await _mqttManager.connect(
+              location: 'floor1', // O usa selectedLocker.areaName
               lockerId: selectedLocker.id,
             );
           }

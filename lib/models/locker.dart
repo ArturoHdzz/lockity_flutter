@@ -18,8 +18,9 @@ class Locker {
   });
 
   factory Locker.fromJson(Map<String, dynamic> json) {
+    final id = json['locker_id'] ?? json['id'];
     return Locker(
-      id: _parseInt(json['id']),
+      id: _parseInt(id),
       organizationId: _parseInt(json['organization_id']),
       areaId: _parseInt(json['area_id']),
       lockerNumber: _parseInt(json['locker_number']),
