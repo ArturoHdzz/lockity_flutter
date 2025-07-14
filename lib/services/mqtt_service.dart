@@ -231,6 +231,7 @@ class MqttService {
   }
 
   static Future<bool> openCompartment({
+    required String topic,
     required String userId,
     required int compartmentId,
   }) async {
@@ -242,7 +243,6 @@ class MqttService {
       debugPrint('❌ MQTT: Cannot send command - not connected');
       return false;
     }
-    final topic = '$_currentLocation/$_currentLockerId/comand/toggle';
     final message = {
       'id_usuario': userId,
       'valor': 1,
@@ -252,27 +252,25 @@ class MqttService {
     return await _publishMessage(client, topic, message);
   }
 
-  static Future<bool> activateAlarm() async {
+  static Future<bool> activateAlarm({required String topic}) async {
     debugPrint('📤 MQTT: ===== ACTIVATING ALARM =====');
     final client = _client;
     if (!_isConnected || client == null) {
       debugPrint('❌ MQTT: Cannot send alarm - not connected');
       return false;
     }
-    final topic = '$_currentLocation/$_currentLockerId/comand/alarm';
     final message = {'value': true};
     debugPrint('📍 MQTT: Publishing alarm to topic: $topic');
     return await _publishMessage(client, topic, message);
   }
 
-  static Future<bool> takePicture() async {
+  static Future<bool> takePicture({required String topic}) async {
     debugPrint('📤 MQTT: ===== TAKING PICTURE =====');
     final client = _client;
     if (!_isConnected || client == null) {
       debugPrint('❌ MQTT: Cannot send picture command - not connected');
       return false;
     }
-    final topic = '$_currentLocation/$_currentLockerId/comand/picture';
     final message = {'value': true};
     debugPrint('📍 MQTT: Publishing picture command to topic: $topic');
     return await _publishMessage(client, topic, message);

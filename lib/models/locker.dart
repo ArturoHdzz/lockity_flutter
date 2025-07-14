@@ -5,6 +5,7 @@ class Locker {
   final int lockerNumber;
   final String organizationName;
   final String areaName;
+  final String serialNumber;
   final String status;
 
   const Locker({
@@ -14,11 +15,13 @@ class Locker {
     required this.lockerNumber,
     required this.organizationName,
     required this.areaName,
-    this.status = 'closed',
+    required this.serialNumber,
+    required this.status,
   });
 
   factory Locker.fromJson(Map<String, dynamic> json) {
     final id = json['locker_id'] ?? json['id'];
+    final serial = json['serial_number'] ?? json['locker_serial_number'] ?? '';
     return Locker(
       id: _parseInt(id),
       organizationId: _parseInt(json['organization_id']),
@@ -26,6 +29,7 @@ class Locker {
       lockerNumber: _parseInt(json['locker_number']),
       organizationName: _parseString(json['organization_name']),
       areaName: _parseString(json['area_name']),
+      serialNumber: _parseString(serial),
       status: _parseString(json['status']),
     );
   }
@@ -50,7 +54,7 @@ class Locker {
       'locker_number': lockerNumber,
       'organization_name': organizationName,
       'area_name': areaName,
-      'status': status,
+      'serial_number': serialNumber,
     };
   }
 

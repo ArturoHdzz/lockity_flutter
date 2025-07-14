@@ -1,5 +1,6 @@
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/models/locker_response.dart';
+import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/repositories/locker_repository.dart';
 
 class LockerRepositoryMock implements LockerRepository {
@@ -155,5 +156,18 @@ class LockerRepositoryMock implements LockerRepository {
     };
 
     return LockerOperationResponse.fromJson(mockResponse);
+  }
+
+  @override
+  Future<LockerConfigResponse> getLockerConfig(String serialNumber) async {
+    await Future.delayed(_networkDelay);
+    return LockerConfigResponse(
+      lockerId: '1',
+      topics: {
+        'toggle': 'mock/toggle',
+        'alarm': 'mock/alarm',
+        'picture': 'mock/picture',
+      },
+    );
   }
 }

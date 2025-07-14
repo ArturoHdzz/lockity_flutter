@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:lockity_flutter/models/locker.dart';
 import 'package:lockity_flutter/models/compartment.dart';
+import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
 import 'package:lockity_flutter/use_cases/get_compartments_use_case.dart';
@@ -61,12 +62,19 @@ class LockerProvider extends ChangeNotifier {
     }
   }
 
-  void selectLocker(Locker locker) {
+  LockerConfigResponse? _lockerConfig;
+
+  LockerConfigResponse? get lockerConfig => _lockerConfig;
+
+  Future<void> selectLocker(Locker locker) async {
     _selectedLocker = locker;
     _selectedCompartment = null;
     _compartments.clear();
     notifyListeners();
-    
+
+    final config = await _getLockersUseCase.repository.getLockerConfig(locker.serialNumber);
+    _lockerConfig = config;
+
     loadCompartments(locker.id);
   }
 
@@ -96,19 +104,19 @@ class LockerProvider extends ChangeNotifier {
     if (!canOperate || _selectedLocker == null || _selectedCompartment == null) {
       return false;
     }
-
     _setState(LockerState.operating);
     _clearError();
 
     try {
       debugPrint('🏠 PROVIDER: Starting compartment open operation');
-      
+      final topic = _lockerConfig?.topics['toggle'];
+      if (topic == null) throw Exception('No topic for toggle');
       await _controlLockerUseCase.openCompartment(
         lockerId: _selectedLocker!.id,
         compartmentId: _selectedCompartment!.id,
+        topic: topic, 
       );
 
-      // Actualizar estado local
       final updatedCompartments = _compartments.map((comp) {
         if (comp.id == _selectedCompartment!.id) {
           return Compartment(
@@ -143,8 +151,12 @@ class LockerProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('🔎 Topics disponibles (activateAlarm): ${_lockerConfig?.topics}');
+      final topic = _lockerConfig?.topics['alarm'];
+      if (topic == null) throw Exception('No topic for alarm');
       await _controlLockerUseCase.activateAlarm(
         lockerId: _selectedLocker!.id,
+        topic: topic,
       );
       _setState(LockerState.loaded);
       return true;
@@ -161,8 +173,12 @@ class LockerProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('🔎 Topics disponibles (takePicture): ${_lockerConfig?.topics}');
+      final topic = _lockerConfig?.topics['picture'];
+      if (topic == null) throw Exception('No topic for picture');
       await _controlLockerUseCase.takePicture(
         lockerId: _selectedLocker!.id,
+        topic: topic, 
       );
       _setState(LockerState.loaded);
       return true;

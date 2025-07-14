@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lockity_flutter/core/app_config.dart';
+import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/models/locker_response.dart';
 import 'package:lockity_flutter/repositories/locker_repository.dart';
@@ -33,7 +34,7 @@ class LockerRepositoryImpl implements LockerRepository {
       final response = await _httpClient.get(
         uri,
         headers: {
-          ...token.authHeaders,
+          ...?token.authHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -73,7 +74,7 @@ class LockerRepositoryImpl implements LockerRepository {
       final response = await _httpClient.get(
         Uri.parse(url),
         headers: {
-          ...token.authHeaders,
+          ...?token?.authHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json', 
         },
@@ -113,7 +114,7 @@ class LockerRepositoryImpl implements LockerRepository {
       final response = await _httpClient.put(
         Uri.parse(url),
         headers: {
-          ...token.authHeaders,
+          ...?token?.authHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -133,6 +134,30 @@ class LockerRepositoryImpl implements LockerRepository {
         'Please check your internet connection and try again.',
       );
     }
+  }
+
+  @override
+  Future<LockerConfigResponse> getLockerConfig(String serialNumber) async {
+    final url = '${AppConfig.lockerConfigEndpoint}/$serialNumber';
+    final response = await _httpClient.get(
+      Uri.parse(url),
+      headers: {
+        'x-iot-key': AppConfig.iotSecretKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ).timeout(Duration(seconds: AppConfig.httpTimeout));
+
+    debugPrint('🔴 LockerConfig status: ${response.statusCode}');
+    debugPrint('🔴 LockerConfig body: ${response.body}');
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 404) {
+        throw LockerRepositoryException._notFound('Locker not found for serial: $serialNumber');
+      }
+      throw Exception('Failed to load locker config: ${response.statusCode} - ${response.body}');
+    }
+    return LockerConfigResponse.fromJson(json.decode(response.body));
   }
 
   LockerListResponse _handleLockerListResponse(http.Response response) {

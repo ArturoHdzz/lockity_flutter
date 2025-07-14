@@ -15,11 +15,11 @@ void main() async {
   
   await AppConfig.load();
   
-  runApp(const MainApp());
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -47,16 +47,13 @@ class MainApp extends StatelessWidget {
                 subtitle: 'Verifying security credentials...',
               );
             }
-            
             if (snapshot.data == true) {
               NavigationService.setCurrentScreen(NavigationScreen.home);
-              
               return const AppScaffold(
                 showDrawer: true,
                 body: HomeScreen(),
               );
             }
-            
             return const AppScaffold(
               showDrawer: false,
               body: ActivityAuth(),

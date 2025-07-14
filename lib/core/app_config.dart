@@ -27,6 +27,7 @@ class AppConfig {
   static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
   static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
   static String get lockersUrl => dotenv.env['LOCKERS_ENDPOINT'] ?? '$baseUrl/api/lockers';
+  static String get lockerConfigEndpoint => dotenv.env['LOCKER_CONFIG_ENDPOINT'] ?? '$baseUrl/api/locker-config';
   
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';
@@ -59,4 +60,5 @@ class AppConfig {
   
   static bool get useMockAuditLogs => dotenv.env['USE_MOCK_AUDIT_LOGS'] == 'true';
   static bool get useMockLockers => dotenv.env['USE_MOCK_LOCKERS'] == 'true';
+  static String get iotSecretKey => dotenv.env['IOT_SECRET_KEY'] ?? '';
 }

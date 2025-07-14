@@ -14,6 +14,7 @@ class ControlLockerUseCase {
   Future<LockerOperationResponse> openCompartment({
     required int lockerId,
     required int compartmentId,
+    required String topic,
     String location = 'floor1',
   }) async {
     debugPrint('🔓 CONTROL: Opening compartment $compartmentId in locker $lockerId');
@@ -59,6 +60,7 @@ class ControlLockerUseCase {
       if (MqttService.isConnected) {
         debugPrint('📤 CONTROL: Sending MQTT open command...');
         final mqttSuccess = await MqttService.openCompartment(
+          topic: topic,
           userId: userId,
           compartmentId: compartmentId,
         );
@@ -91,6 +93,7 @@ class ControlLockerUseCase {
 
   Future<LockerOperationResponse> activateAlarm({
     required int lockerId,
+    required String topic, // <-- nuevo parámetro
     String location = 'floor1',
   }) async {
     debugPrint('🚨 CONTROL: Activating alarm for locker $lockerId');
@@ -115,7 +118,7 @@ class ControlLockerUseCase {
       
       if (MqttService.isConnected) {
         debugPrint('📤 CONTROL: Sending MQTT alarm command...');
-        await MqttService.activateAlarm();
+        await MqttService.activateAlarm(topic: topic);
         debugPrint('✅ CONTROL: Alarm command sent via MQTT');
       } else {
         debugPrint('⚠️ CONTROL: MQTT not available for alarm');
@@ -136,6 +139,7 @@ class ControlLockerUseCase {
 
   Future<LockerOperationResponse> takePicture({
     required int lockerId,
+    required String topic, // <-- nuevo parámetro
     String location = 'floor1',
   }) async {
     debugPrint('📸 CONTROL: Taking picture for locker $lockerId');
@@ -160,7 +164,7 @@ class ControlLockerUseCase {
       
       if (MqttService.isConnected) {
         debugPrint('📤 CONTROL: Sending MQTT picture command...');
-        await MqttService.takePicture();
+        await MqttService.takePicture(topic: topic);
         debugPrint('✅ CONTROL: Picture command sent via MQTT');
       } else {
         debugPrint('⚠️ CONTROL: MQTT not available for picture');
