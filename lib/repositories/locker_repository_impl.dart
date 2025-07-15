@@ -34,7 +34,7 @@ class LockerRepositoryImpl implements LockerRepository {
       final response = await _httpClient.get(
         uri,
         headers: {
-          ...?token.authHeaders,
+          ...token.authHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -74,7 +74,7 @@ class LockerRepositoryImpl implements LockerRepository {
       final response = await _httpClient.put(
         Uri.parse(url),
         headers: {
-          ...?token?.authHeaders,
+          ...token.authHeaders,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },

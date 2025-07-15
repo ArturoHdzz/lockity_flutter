@@ -4,10 +4,8 @@ import 'package:lockity_flutter/components/locker_card.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/models/locker.dart';
-import 'package:lockity_flutter/models/compartment.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/repositories/locker_repository_impl.dart';
-import 'package:lockity_flutter/models/locker_response.dart';
 
 class MyLockersScreen extends StatefulWidget {
   const MyLockersScreen({super.key});
@@ -20,9 +18,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
   final _lockerRepo = LockerRepositoryImpl();
   List<Locker> _lockers = [];
   Locker? _selectedLocker;
-  List<Compartment> _compartments = [];
   bool _loadingLockers = true;
-  bool _loadingCompartments = false;
 
   @override
   void initState() {
@@ -40,7 +36,6 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
         _lockers = response.items;
         _selectedLocker = _lockers.isNotEmpty ? _lockers.first : null;
       });
-      // NO llames a _fetchCompartments aquí
     } catch (e) {
       setState(() {
         _lockers = [];
@@ -57,8 +52,6 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
     final locker = _lockers.firstWhere((l) => l.serialNumber == serialNumber, orElse: () => _lockers.first);
     setState(() {
       _selectedLocker = locker;
-      // Ya NO llames a _fetchCompartments(locker.id);
-      // Los compartimentos ya están en locker.compartments
     });
   }
 

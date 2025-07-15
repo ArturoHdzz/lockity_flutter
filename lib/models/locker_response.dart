@@ -1,5 +1,4 @@
 import 'package:lockity_flutter/models/locker.dart';
-import 'package:lockity_flutter/models/compartment.dart';
 
 class LockerListResponse {
   final List<Locker> items;
