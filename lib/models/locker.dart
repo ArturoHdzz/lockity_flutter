@@ -1,3 +1,5 @@
+import 'compartment.dart';
+
 class Locker {
   final int id;
   final int organizationId;
@@ -7,6 +9,7 @@ class Locker {
   final String areaName;
   final String serialNumber;
   final String status;
+  final List<Compartment> compartments;
 
   const Locker({
     required this.id,
@@ -17,11 +20,13 @@ class Locker {
     required this.areaName,
     required this.serialNumber,
     required this.status,
+    this.compartments = const [],
   });
 
   factory Locker.fromJson(Map<String, dynamic> json) {
     final id = json['locker_id'] ?? json['id'];
     final serial = json['serial_number'] ?? json['locker_serial_number'] ?? '';
+    final compartmentsList = json['compartments'] as List<dynamic>? ?? [];
     return Locker(
       id: _parseInt(id),
       organizationId: _parseInt(json['organization_id']),
@@ -31,6 +36,7 @@ class Locker {
       areaName: _parseString(json['area_name']),
       serialNumber: _parseString(serial),
       status: _parseString(json['status']),
+      compartments: compartmentsList.map((c) => Compartment.fromLockerListJson(c)).toList(),
     );
   }
 

@@ -57,46 +57,6 @@ class LockerRepositoryImpl implements LockerRepository {
   }
 
   @override
-  Future<CompartmentListResponse> getCompartments(int lockerId) async {
-    try {
-      final token = await OAuthService.getStoredToken();
-      if (token == null) {
-        throw const LockerRepositoryException._session('Authentication required');
-      }
-
-      final url = '${AppConfig.baseUrl}/api/lockers/$lockerId/compartments';
-      
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Making GET compartments request to: $url');
-        debugPrint('🔐 LOCKER_REPO: Headers: ${token.authHeaders}');
-      }
-      
-      final response = await _httpClient.get(
-        Uri.parse(url),
-        headers: {
-          ...?token?.authHeaders,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json', 
-        },
-      ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Compartments response status: ${response.statusCode}');
-        debugPrint('🌐 LOCKER_REPO: Compartments response body: ${response.body}');
-      }
-
-      return _handleCompartmentListResponse(response);
-    } on LockerRepositoryException {
-      rethrow;
-    } catch (e) {
-      debugPrint('❌ LOCKER_REPO: Compartments network error: $e');
-      throw LockerRepositoryException._network(
-        'Please check your internet connection and try again.',
-      );
-    }
-  }
-
-  @override
   Future<LockerOperationResponse> updateLockerStatus(UpdateLockerStatusRequest request) async {
     try {
       final token = await OAuthService.getStoredToken();
@@ -183,37 +143,6 @@ class LockerRepositoryImpl implements LockerRepository {
     }
   }
 
-  CompartmentListResponse _handleCompartmentListResponse(http.Response response) {
-    switch (response.statusCode) {
-      case 401:
-        throw const LockerRepositoryException._session(
-          'Your session has expired. Please sign in again.'
-        );
-      case 403:
-        throw const LockerRepositoryException._permission(
-          'You don\'t have permission to view compartments.'
-        );
-      case 404:
-        throw const LockerRepositoryException._notFound(
-          'Locker not found or you don\'t have access to it.'
-        );
-      case 400:
-        throw const LockerRepositoryException._validation(
-          'Invalid locker ID provided.'
-        );
-      case 500:
-        throw const LockerRepositoryException._server(
-          'Server error occurred. Please try again later.'
-        );
-      case 200:
-        return _parseCompartmentListResponse(response);
-      default:
-        throw LockerRepositoryException._server(
-          'Unable to load compartments. Please try again later.'
-        );
-    }
-  }
-
   LockerOperationResponse _handleOperationResponse(http.Response response) {
     switch (response.statusCode) {
       case 401:
@@ -259,24 +188,6 @@ class LockerRepositoryImpl implements LockerRepository {
     } catch (e) {
       throw const LockerRepositoryException._format(
         'Unable to process lockers data. Please try again.'
-      );
-    }
-  }
-
-  CompartmentListResponse _parseCompartmentListResponse(http.Response response) {
-    final responseData = _decodeResponse(response);
-    
-    if (responseData['success'] != true) {
-      throw LockerRepositoryException._server(
-        responseData['message'] ?? 'Failed to load compartments.'
-      );
-    }
-
-    try {
-      return CompartmentListResponse.fromJson(responseData);
-    } catch (e) {
-      throw const LockerRepositoryException._format(
-        'Unable to process compartments data. Please try again.'
       );
     }
   }

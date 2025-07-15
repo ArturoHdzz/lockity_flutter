@@ -125,28 +125,6 @@ class LockerRepositoryMock implements LockerRepository {
   }
 
   @override
-  Future<CompartmentListResponse> getCompartments(int lockerId) async {
-    await Future.delayed(_networkDelay);
-
-    final compartments = _mockCompartments[lockerId] ?? [];
-
-    final mockResponse = {
-      "success": true,
-      "message": "Compartments retrieved successfully",
-      "data": {
-        "items": compartments,
-        "total": compartments.length,
-        "page": 1,
-        "limit": 10,
-        "has_next_page": false,
-        "has_previous_page": false
-      }
-    };
-
-    return CompartmentListResponse.fromJson(mockResponse);
-  }
-
-  @override
   Future<LockerOperationResponse> updateLockerStatus(UpdateLockerStatusRequest request) async {
     await Future.delayed(_networkDelay);
 

@@ -22,6 +22,15 @@ class Compartment {
     );
   }
 
+  factory Compartment.fromLockerListJson(Map<String, dynamic> json) {
+    return Compartment(
+      id: _parseInt(json['compartment_id']),
+      compartmentNumber: _parseInt(json['compartment_number']),
+      status: '', 
+      users: const [],
+    );
+  }
+
   static int _parseInt(dynamic value) {
     if (value is int) return value;
     if (value is String) return int.tryParse(value) ?? 0;

@@ -7,7 +7,6 @@ import 'package:lockity_flutter/providers/locker_provider.dart';
 import 'package:lockity_flutter/repositories/locker_repository_impl.dart';
 import 'package:lockity_flutter/repositories/locker_repository_mock.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
-import 'package:lockity_flutter/use_cases/get_compartments_use_case.dart';
 import 'package:lockity_flutter/use_cases/control_locker_use_case.dart';
 import 'package:lockity_flutter/services/mqtt_connection_manager.dart';
 
@@ -43,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _provider = LockerProvider(
       getLockersUseCase: GetLockersUseCase(repository),
-      getCompartmentsUseCase: GetCompartmentsUseCase(repository),
       controlLockerUseCase: ControlLockerUseCase(repository),
     );
 
@@ -263,26 +261,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCompartmentDropdown() {
-    if (_provider.selectedLocker == null) {
+    final locker = _provider.selectedLocker;
+
+    if (locker == null) {
       return _buildDisabledDropdown('Select a locker first');
     }
 
-    if (_provider.isLoading && _provider.compartments.isEmpty) {
-      return _buildLoadingDropdown('Loading compartments...');
-    }
+    final compartments = locker.compartments;
 
-    if (_provider.hasError) {
-      return _buildErrorDropdown('Failed to load compartments');
-    }
-
-    if (_provider.compartments.isEmpty) {
+    if (compartments.isEmpty) {
       return _buildEmptyDropdown('No compartments available');
     }
 
-    final compartmentNames = _provider.compartments.map((compartment) => 
-      compartment.displayName
-    ).toList();
-
+    final compartmentNames = compartments.map((compartment) => compartment.displayName).toList();
     final selectedValue = _provider.selectedCompartment?.displayName;
 
     return CustomDropdown(
@@ -291,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
       hint: 'Select Compartment',
       onChanged: (newValue) {
         if (newValue != null) {
-          final selectedCompartment = _provider.compartments.firstWhere(
+          final selectedCompartment = compartments.firstWhere(
             (comp) => comp.displayName == newValue,
           );
           _provider.selectCompartment(selectedCompartment);

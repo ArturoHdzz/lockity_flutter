@@ -4,22 +4,18 @@ import 'package:lockity_flutter/models/compartment.dart';
 import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
-import 'package:lockity_flutter/use_cases/get_compartments_use_case.dart';
 import 'package:lockity_flutter/use_cases/control_locker_use_case.dart';
 
 enum LockerState { initial, loading, loaded, operating, error }
 
 class LockerProvider extends ChangeNotifier {
   final GetLockersUseCase _getLockersUseCase;
-  final GetCompartmentsUseCase _getCompartmentsUseCase;
   final ControlLockerUseCase _controlLockerUseCase;
 
   LockerProvider({
     required GetLockersUseCase getLockersUseCase,
-    required GetCompartmentsUseCase getCompartmentsUseCase,
     required ControlLockerUseCase controlLockerUseCase,
   }) : _getLockersUseCase = getLockersUseCase,
-       _getCompartmentsUseCase = getCompartmentsUseCase,
        _controlLockerUseCase = controlLockerUseCase;
 
   LockerState _state = LockerState.initial;
@@ -68,31 +64,12 @@ class LockerProvider extends ChangeNotifier {
 
   Future<void> selectLocker(Locker locker) async {
     _selectedLocker = locker;
-    _selectedCompartment = null;
-    _compartments.clear();
+    _selectedCompartment = locker.compartments.isNotEmpty ? locker.compartments.first : null;
     notifyListeners();
 
+    // Solo carga la config, NO los compartimentos
     final config = await _getLockersUseCase.repository.getLockerConfig(locker.serialNumber);
     _lockerConfig = config;
-
-    loadCompartments(locker.id);
-  }
-
-  Future<void> loadCompartments(int lockerId) async {
-    if (_state == LockerState.loading) return;
-
-    _setState(LockerState.loading);
-    _clearError();
-    _compartments.clear();
-    _selectedCompartment = null;
-
-    try {
-      final response = await _getCompartmentsUseCase.execute(lockerId);
-      _compartments = response.items;
-      _setState(LockerState.loaded);
-    } catch (e) {
-      _setError(_extractUserFriendlyMessage(e.toString()));
-    }
   }
 
   void selectCompartment(Compartment compartment) {

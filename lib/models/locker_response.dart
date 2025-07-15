@@ -48,44 +48,6 @@ class LockerListResponse {
   String toString() => 'LockerListResponse(items: ${items.length}, total: $total)';
 }
 
-class CompartmentListResponse {
-  final List<Compartment> items;
-  final int total;
-  final int page;
-  final int limit;
-  final bool hasNextPage;
-  final bool hasPreviousPage;
-
-  const CompartmentListResponse({
-    required this.items,
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.hasNextPage,
-    required this.hasPreviousPage,
-  });
-
-  factory CompartmentListResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? {};
-    final itemsList = data['items'] as List<dynamic>? ?? [];
-
-    return CompartmentListResponse(
-      items: itemsList.map((item) => Compartment.fromJson(item)).toList(),
-      total: LockerListResponse._parseInt(data['total']),
-      page: LockerListResponse._parseInt(data['page']),
-      limit: LockerListResponse._parseInt(data['limit']),
-      hasNextPage: data['has_next_page'] == true,
-      hasPreviousPage: data['has_previous_page'] == true,
-    );
-  }
-
-  bool get isEmpty => items.isEmpty;
-  bool get isNotEmpty => items.isNotEmpty;
-
-  @override
-  String toString() => 'CompartmentListResponse(items: ${items.length}, total: $total)';
-}
-
 class LockerOperationResponse {
   final bool success;
   final String message;
