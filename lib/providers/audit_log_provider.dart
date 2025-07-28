@@ -18,6 +18,7 @@ class AuditLogProvider extends ChangeNotifier {
   AuditLogRequest _currentRequest = const AuditLogRequest();
   AuditLogResponse? _lastResponse;
   String? _errorMessage;
+  bool _disposed = false;
 
   AuditLogState get state => _state;
   List<AuditLog> get auditLogs => List.unmodifiable(_auditLogs);
@@ -38,7 +39,7 @@ class AuditLogProvider extends ChangeNotifier {
   Future<void> loadAuditLogs({AuditLogRequest? request}) async {
     final newRequest = request ?? const AuditLogRequest();
     
-    if (_state == AuditLogState.loading) return;
+    if (_state == AuditLogState.loading || _disposed) return;
 
     _currentRequest = newRequest;
     _setState(AuditLogState.loading);
@@ -55,7 +56,7 @@ class AuditLogProvider extends ChangeNotifier {
   }
 
   Future<void> loadMore() async {
-    if (!canLoadMore) return;
+    if (!canLoadMore || _disposed) return;
 
     _setState(AuditLogState.loadingMore);
     _clearError();
@@ -124,21 +125,26 @@ class AuditLogProvider extends ChangeNotifier {
       .replaceAll('Exception: ', '');
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void _setState(AuditLogState newState) {
+    if (_disposed) return;
     _state = newState;
     notifyListeners();
   }
 
   void _setError(String error) {
+    if (_disposed) return;
     _errorMessage = error;
     _setState(AuditLogState.error);
   }
 
-  void _clearError() => _errorMessage = null;
-
-  @override
-  void dispose() {
-    // 
-    super.dispose();
+  void _clearError() {
+    if (_disposed) return;
+    _errorMessage = null;
   }
 }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:lockity_flutter/core/app_config.dart';
 import 'package:lockity_flutter/models/locker_config_response.dart';
@@ -16,89 +15,48 @@ class LockerRepositoryImpl implements LockerRepository {
 
   @override
   Future<LockerListResponse> getLockers(LockerListRequest request) async {
-    try {
-      final token = await OAuthService.getStoredToken();
-      if (token == null) {
-        throw const LockerRepositoryException._session('Authentication required');
-      }
-
-      final uri = Uri.parse(AppConfig.lockersUrl).replace(
-        queryParameters: request.toQueryParameters(),
-      );
-
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Making GET request to: $uri');
-        debugPrint('🔐 LOCKER_REPO: Headers: ${token.authHeaders}');
-      }
-
-      final response = await _httpClient.get(
-        uri,
-        headers: {
-          ...token.authHeaders,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Response status: ${response.statusCode}');
-        debugPrint('🌐 LOCKER_REPO: Response body: ${response.body}');
-      }
-
-      return _handleLockerListResponse(response);
-    } on LockerRepositoryException {
-      rethrow;
-    } catch (e) {
-      debugPrint('❌ LOCKER_REPO: Network error: $e');
-      throw LockerRepositoryException._network(
-        'Please check your internet connection and try again.',
-      );
+    final token = await OAuthService.getStoredToken();
+    if (token == null) {
+      throw const LockerRepositoryException._session('Authentication required');
     }
+    final uri = Uri.parse(AppConfig.lockersUrl).replace(
+      queryParameters: request.toQueryParameters(),
+    );
+    final response = await _httpClient.get(
+      uri,
+      headers: {
+        ...token.authHeaders,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ).timeout(Duration(seconds: AppConfig.httpTimeout));
+    return _handleLockerListResponse(response);
   }
 
   @override
   Future<LockerOperationResponse> updateLockerStatus(UpdateLockerStatusRequest request) async {
-    try {
-      final token = await OAuthService.getStoredToken();
-      if (token == null) {
-        throw const LockerRepositoryException._session('Authentication required');
-      }
-
-      final url = '${AppConfig.baseUrl}/api/lockers/${request.lockerId}/${request.statusString}';
-      
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Making PUT request to: $url');
-        debugPrint('🔐 LOCKER_REPO: Headers: ${token.authHeaders}');
-      }
-      
-      final response = await _httpClient.put(
-        Uri.parse(url),
-        headers: {
-          ...token.authHeaders,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
-      if (AppConfig.debugMode) {
-        debugPrint('🌐 LOCKER_REPO: Response status: ${response.statusCode}');
-        debugPrint('🌐 LOCKER_REPO: Response body: ${response.body}');
-      }
-
-      return _handleOperationResponse(response);
-    } on LockerRepositoryException {
-      rethrow;
-    } catch (e) {
-      debugPrint('❌ LOCKER_REPO: Network error: $e');
-      throw LockerRepositoryException._network(
-        'Please check your internet connection and try again.',
-      );
+    final token = await OAuthService.getStoredToken();
+    if (token == null) {
+      throw const LockerRepositoryException._session('Authentication required');
     }
+    final url = '${AppConfig.baseUrl}/api/lockers/${request.lockerId}/${request.statusString}';
+    final response = await _httpClient.put(
+      Uri.parse(url),
+      headers: {
+        ...token.authHeaders,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ).timeout(Duration(seconds: AppConfig.httpTimeout));
+    return _handleOperationResponse(response);
   }
 
   @override
   Future<LockerConfigResponse> getLockerConfig(String serialNumber) async {
     final url = '${AppConfig.lockerConfigEndpoint}/$serialNumber';
+    if (url.isEmpty || !url.startsWith('http')) {
+      throw Exception('Locker config URL is invalid: $url');
+    }
     final response = await _httpClient.get(
       Uri.parse(url),
       headers: {
@@ -107,10 +65,6 @@ class LockerRepositoryImpl implements LockerRepository {
         'Accept': 'application/json',
       },
     ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
-    debugPrint('🔴 LockerConfig status: ${response.statusCode}');
-    debugPrint('🔴 LockerConfig body: ${response.body}');
-
     if (response.statusCode != 200) {
       if (response.statusCode == 404) {
         throw LockerRepositoryException._notFound('Locker not found for serial: $serialNumber');
@@ -176,32 +130,17 @@ class LockerRepositoryImpl implements LockerRepository {
 
   LockerListResponse _parseLockerListResponse(http.Response response) {
     final responseData = _decodeResponse(response);
-    
     if (responseData['success'] != true) {
       throw LockerRepositoryException._server(
         responseData['message'] ?? 'Failed to load lockers.'
       );
     }
-
-    try {
-      return LockerListResponse.fromJson(responseData);
-    } catch (e) {
-      throw const LockerRepositoryException._format(
-        'Unable to process lockers data. Please try again.'
-      );
-    }
+    return LockerListResponse.fromJson(responseData);
   }
 
   LockerOperationResponse _parseOperationResponse(http.Response response) {
     final responseData = _decodeResponse(response);
-
-    try {
-      return LockerOperationResponse.fromJson(responseData);
-    } catch (e) {
-      throw const LockerRepositoryException._format(
-        'Unable to process operation response. Please try again.'
-      );
-    }
+    return LockerOperationResponse.fromJson(responseData);
   }
 
   Map<String, dynamic> _decodeResponse(http.Response response) {

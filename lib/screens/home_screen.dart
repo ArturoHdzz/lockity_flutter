@@ -51,12 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
       await _provider.loadLockers();
       if (_provider.lockers.isNotEmpty) {
         final firstLocker = _provider.lockers.first;
-        _provider.selectLocker(firstLocker);
-        if (!AppConfig.useMockLockers) {
-          await _mqttManager.connect(
-            location: 'floor1',
-            lockerId: firstLocker.id,
-          );
+        try {
+          await _provider.selectLocker(firstLocker);
+          if (_provider.lockerConfig == null) {
+            _showErrorSnackBar('Failed to load locker configuration.');
+          }
+        } catch (e) {
+          _showErrorSnackBar('Failed to load locker configuration.');
         }
       }
     });
@@ -67,13 +68,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleOpen() async {
-    if (!_provider.canOperate) {
+    if (!_provider.canOperate || _provider.selectedLocker == null || _provider.selectedCompartment == null) {
       _showErrorSnackBar('Please select a locker and compartment first');
       return;
     }
 
     final success = await _provider.openSelectedCompartment();
-    
+
     if (success) {
       _showSuccessSnackBar('Opening compartment...');
     } else if (_provider.errorMessage != null) {
@@ -150,8 +151,6 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          _buildConnectionStatus(),
-          const SizedBox(height: 20),
           _buildLockerDropdown(),
           const SizedBox(height: 20),
           _buildCompartmentDropdown(),
@@ -161,57 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
           _buildOpenButton(), 
           const Spacer(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConnectionStatus() {
-    final isMock = AppConfig.useMockLockers;
-    final isConnected = _mqttManager.isConnected;
-    final isConnecting = _mqttManager.isConnecting;
-
-    Color statusColor;
-    IconData statusIcon;
-    String statusText;
-
-    if (isMock) {
-      statusColor = Colors.orange;
-      statusIcon = Icons.science;
-      statusText = 'Mock Mode';
-    } else if (isConnecting) {
-      statusColor = Colors.blueGrey;
-      statusIcon = Icons.sync;
-      statusText = 'Connecting...';
-    } else if (isConnected) {
-      statusColor = Colors.green;
-      statusIcon = Icons.verified_user;
-      statusText = 'Connected';
-    } else {
-      statusColor = Colors.red;
-      statusIcon = Icons.wifi_off;
-      statusText = 'Disconnected';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(statusIcon, size: 16, color: statusColor),
-          const SizedBox(width: 8),
-          Text(
-            statusText,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: statusColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ],
       ),
     );
@@ -251,8 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (!AppConfig.useMockLockers) {
             await _mqttManager.connect(
-              location: 'floor1', // O usa selectedLocker.areaName
-              lockerId: selectedLocker.id,
+              serialNumber: selectedLocker.serialNumber,
             );
           }
         }

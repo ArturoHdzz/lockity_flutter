@@ -1,233 +1,182 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:lockity_flutter/core/app_config.dart';
 
 class MqttService {
   static MqttServerClient? _client;
-  static String? _currentLocation;
-  static int? _currentLockerId;
+  static String? _currentSerialNumber;
   static bool _isConnected = false;
+  static bool _isDisposing = false;
+  static final Map<String, void Function(String payload)> _subscriptions = {};
 
-  static bool get isConnected => _isConnected;
-  static String? get currentLocation => _currentLocation;
-  static int? get currentLockerId => _currentLockerId;
-  static bool get isSecureConnection => _isConnected && (_client?.secure ?? false);
+  static bool get isConnected => _isConnected && !_isDisposing;
+  static String? get currentSerialNumber => _currentSerialNumber;
 
   static Future<bool> connect({
-    required String location,
-    required int lockerId,
+    required String serialNumber,
     void Function()? onDisconnected,
   }) async {
+    if (_isConnected && _currentSerialNumber == serialNumber && !_isDisposing) {
+      return true;
+    }
+    if (_isConnected || _client != null) {
+      await disconnect();
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
     try {
-      debugPrint('🔌 MQTT: ===== STARTING CONNECTION =====');
-      debugPrint('🔌 MQTT: Host: ${AppConfig.mqttBrokerHost}');
-      debugPrint('🔌 MQTT: Port: ${AppConfig.mqttBrokerPort}');
-      debugPrint('🔌 MQTT: Client ID: ${AppConfig.mqttClientId}');
-      debugPrint('🔌 MQTT: Username: ${AppConfig.mqttUsername}');
-      debugPrint('🔌 MQTT: Password: ${AppConfig.mqttPassword.length > 20 ? AppConfig.mqttPassword.substring(0, 20) : AppConfig.mqttPassword}...');
-      debugPrint('📍 MQTT: Location: $location, Locker ID: $lockerId');
-      _currentLocation = location;
-      _currentLockerId = lockerId;
-      bool connected = await _trySSLConnection();
-      if (!connected) {
-        debugPrint('🔄 MQTT: SSL failed, trying insecure connection...');
-        connected = await _tryInsecureConnection();
-      }
-      if (connected) {
-        await _subscribeToTopics();
-        debugPrint('✅ MQTT: ===== CONNECTION SUCCESSFUL =====');
-        debugPrint('✅ MQTT: Connection type: ${isSecureConnection ? "SSL" : "Insecure"}');
-      } else {
-        debugPrint('❌ MQTT: ===== ALL CONNECTION ATTEMPTS FAILED =====');
-      }
+      _currentSerialNumber = serialNumber;
+      _isDisposing = false;
+      bool connected = await _tryConnection(onDisconnected: onDisconnected);
       return connected;
-    } catch (e, stackTrace) {
-      debugPrint('❌ MQTT: ===== CONNECTION ERROR =====');
-      debugPrint('❌ MQTT: Error: $e');
-      debugPrint('❌ MQTT: Error type: ${e.runtimeType}');
-      debugPrint('❌ MQTT: Stack trace: $stackTrace');
+    } catch (e) {
+      await _cleanupClient();
       return false;
     }
   }
 
-  static Future<bool> _trySSLConnection() async {
+  static Future<bool> _tryConnection({void Function()? onDisconnected}) async {
     try {
-      debugPrint('🔐 MQTT: ===== ATTEMPTING SSL CONNECTION =====');
-      await _cleanupClient();
       _client = MqttServerClient.withPort(
         AppConfig.mqttBrokerHost,
-        AppConfig.mqttClientId,
+        '${AppConfig.mqttClientId}_$_currentSerialNumber',
         AppConfig.mqttBrokerPort,
       );
-      final client = _client;
-      if (client == null) {
-        debugPrint('❌ MQTT: Failed to create SSL client instance');
-        return false;
-      }
-      debugPrint('🔐 MQTT: Setting up SSL configuration...');
-      client.secure = true;
-      client.keepAlivePeriod = 30;
-      client.connectTimeoutPeriod = 15000;
+      final client = _client!;
+      client.logging(on: kDebugMode);
+      client.keepAlivePeriod = 60;
       client.autoReconnect = true;
-      await _setupSSL(client);
-      _setupCallbacks(client);
-      debugPrint('🔐 MQTT: Creating connection message...');
-      final connMessage = MqttConnectMessage()
-          .withClientIdentifier(AppConfig.mqttClientId)
-          .authenticateAs(AppConfig.mqttUsername, AppConfig.mqttPassword)
-          .startClean()
-          .withWillQos(MqttQos.atLeastOnce);
-      client.connectionMessage = connMessage;
-      debugPrint('🔐 MQTT: Attempting to connect...');
-      final result = await client.connect();
-      debugPrint('🔐 MQTT: Connection result: ${result?.state}');
-      debugPrint('🔐 MQTT: Return code: ${result?.returnCode}');
-      if (result?.state == MqttConnectionState.connected) {
-        _isConnected = true;
-        debugPrint('✅ MQTT: SSL connection established successfully');
-        return true;
-      } else {
-        debugPrint('❌ MQTT: SSL connection failed');
-        debugPrint('❌ MQTT: State: ${result?.state}');
-        debugPrint('❌ MQTT: Return code: ${result?.returnCode}');
-        await _cleanupClient();
-        return false;
-      }
-    } catch (e) {
-      debugPrint('❌ MQTT: SSL connection exception: $e');
-      debugPrint('❌ MQTT: SSL exception type: ${e.runtimeType}');
-      await _cleanupClient();
-      return false;
-    }
-  }
-
-  static Future<bool> _tryInsecureConnection() async {
-    try {
-      debugPrint('🔓 MQTT: ===== ATTEMPTING INSECURE CONNECTION =====');
-      await _cleanupClient();
-      _client = MqttServerClient.withPort(
-        AppConfig.mqttBrokerHost,
-        AppConfig.mqttClientId,
-        1883,
-      );
-      final client = _client;
-      if (client == null) {
-        debugPrint('❌ MQTT: Failed to create insecure client instance');
-        return false;
-      }
-      debugPrint('🔓 MQTT: Setting up insecure configuration...');
-      client.secure = false;
-      client.keepAlivePeriod = 30;
-      client.connectTimeoutPeriod = 10000;
-      client.autoReconnect = true;
-      _setupCallbacks(client);
-      debugPrint('🔓 MQTT: Creating connection message...');
-      final connMessage = MqttConnectMessage()
-          .withClientIdentifier(AppConfig.mqttClientId)
-          .authenticateAs(AppConfig.mqttUsername, AppConfig.mqttPassword)
-          .startClean()
-          .withWillQos(MqttQos.atLeastOnce);
-      client.connectionMessage = connMessage;
-      debugPrint('🔓 MQTT: Attempting to connect...');
-      final result = await client.connect();
-      debugPrint('🔓 MQTT: Connection result: ${result?.state}');
-      debugPrint('🔓 MQTT: Return code: ${result?.returnCode}');
-      if (result?.state == MqttConnectionState.connected) {
-        _isConnected = true;
-        debugPrint('✅ MQTT: Insecure connection established successfully');
-        return true;
-      } else {
-        debugPrint('❌ MQTT: Insecure connection failed');
-        debugPrint('❌ MQTT: State: ${result?.state}');
-        debugPrint('❌ MQTT: Return code: ${result?.returnCode}');
-        await _cleanupClient();
-        return false;
-      }
-    } catch (e) {
-      debugPrint('❌ MQTT: Insecure connection exception: $e');
-      debugPrint('❌ MQTT: Insecure exception type: ${e.runtimeType}');
-      await _cleanupClient();
-      return false;
-    }
-  }
-
-  static Future<void> _setupSSL(MqttServerClient client) async {
-    try {
-      debugPrint('🔒 MQTT: Setting up SSL context...');
-      final context = SecurityContext(withTrustedRoots: false);
-      client.securityContext = context;
-      client.onBadCertificate = (dynamic cert) {
-        debugPrint('⚠️ MQTT: Bad certificate callback triggered');
-        debugPrint('⚠️ MQTT: Certificate: $cert');
-        return true;
+      client.onConnected = onConnected;
+      client.onDisconnected = () {
+        if (!_isDisposing) {
+          onDisconnected?.call();
+        }
       };
-      debugPrint('✅ MQTT: SSL context configured');
+      client.onSubscribed = onSubscribed;
+      client.onSubscribeFail = onSubscribeFail;
+      client.onUnsubscribed = onUnsubscribed;
+      client.pongCallback = pong;
+      client.secure = true;
+      client.securityContext = SecurityContext.defaultContext;
+      client.onBadCertificate = (Object cert) {
+        if (kDebugMode) {
+          try {
+            final x509Cert = cert as X509Certificate;
+            bool isExpectedCert = x509Cert.subject.contains('MyMosquittoCA') &&
+                x509Cert.issuer.contains('MyMosquittoCA') &&
+                AppConfig.mqttBrokerHost == '64.23.237.187';
+            if (isExpectedCert) {
+              return true;
+            }
+          } catch (e) {}
+        }
+        return false;
+      };
+      final connMessage = MqttConnectMessage()
+          .withClientIdentifier('${AppConfig.mqttClientId}_$_currentSerialNumber')
+          .authenticateAs(AppConfig.mqttUsername, AppConfig.mqttPassword)
+          .keepAliveFor(60)
+          .withWillTopic('$_currentSerialNumber/status')
+          .withWillMessage('offline')
+          .startClean()
+          .withWillQos(MqttQos.atLeastOnce);
+      client.connectionMessage = connMessage;
+      await client.connect();
+      if (client.connectionStatus?.state == MqttConnectionState.connected) {
+        _isConnected = true;
+        client.updates?.listen((List<MqttReceivedMessage<MqttMessage?>>? messages) {
+          if (messages == null || messages.isEmpty || _isDisposing) return;
+          for (final message in messages) {
+            try {
+              final MqttPublishMessage recMess = message.payload as MqttPublishMessage;
+              final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+              _subscriptions[message.topic]?.call(payload);
+            } catch (e) {}
+          }
+        });
+        return true;
+      } else {
+        await _cleanupClient();
+        return false;
+      }
     } catch (e) {
-      debugPrint('❌ MQTT: SSL setup error: $e');
-      rethrow;
+      await _cleanupClient();
+      return false;
     }
   }
 
-  static void _setupCallbacks(MqttServerClient client, {void Function()? onDisconnected}) {
-    debugPrint('📞 MQTT: Setting up callbacks...');
-    client.onConnected = () {
-      _isConnected = true;
-      debugPrint('🔗 MQTT: ===== CONNECTED CALLBACK =====');
-      debugPrint('🔗 MQTT: Client connected successfully');
-    };
-    client.onDisconnected = () {
+  static Future<void> _cleanupClient() async {
+    try {
+      _isDisposing = true;
       _isConnected = false;
-      debugPrint('💔 MQTT: ===== DISCONNECTED CALLBACK =====');
-      debugPrint('💔 MQTT: Client disconnected');
-      if (onDisconnected != null) onDisconnected();
-    };
-    client.onSubscribed = (String topic) {
-      debugPrint('📡 MQTT: ===== SUBSCRIBED =====');
-      debugPrint('📡 MQTT: Successfully subscribed to: $topic');
-    };
-    client.onSubscribeFail = (String topic) {
-      debugPrint('📡 MQTT: ===== SUBSCRIPTION FAILED =====');
-      debugPrint('📡 MQTT: Failed to subscribe to: $topic');
-    };
-    client.updates?.listen((List<MqttReceivedMessage<MqttMessage?>>? messages) {
-      if (messages == null) return;
-      debugPrint('📨 MQTT: ===== MESSAGE RECEIVED =====');
-      for (final message in messages) {
-        final topic = message.topic;
-        final payload = MqttPublishPayload.bytesToStringAsString(
-          (message.payload as MqttPublishMessage).payload.message,
-        );
-        debugPrint('📍 MQTT: Topic: $topic');
-        debugPrint('📄 MQTT: Payload: $payload');
+      if (_client != null) {
+        _client?.disconnect();
+        _client = null;
       }
-    });
-    debugPrint('✅ MQTT: Callbacks configured');
+      _subscriptions.clear();
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+    } finally {
+      _isDisposing = false;
+    }
   }
 
-  static Future<void> _subscribeToTopics() async {
-    final client = _client;
-    if (client == null || !_isConnected) {
-      debugPrint('❌ MQTT: Cannot subscribe - client not connected');
+  static void onConnected() {
+    if (!_isDisposing && _client != null) {
+      _isConnected = true;
+    }
+  }
+
+  static void onDisconnected() {
+    if (_isConnected && !_isDisposing && _client != null) {
+      _isConnected = false;
+    }
+  }
+
+  static void onSubscribed(String topic) {}
+  static void onSubscribeFail(String topic) {}
+  static void onUnsubscribed(String? topic) {}
+  static void pong() {}
+
+  static void subscribe(String topic, void Function(String payload) onMessage) {
+    if (_client == null || !_isConnected || _isDisposing) {
       return;
     }
     try {
-      final topics = [
-        '$_currentLocation/$_currentLockerId/status',
-        '$_currentLocation/$_currentLockerId/response',
-        '$_currentLocation/$_currentLockerId/comand/fingerprint',
-      ];
-      debugPrint('📡 MQTT: ===== SUBSCRIBING TO TOPICS =====');
-      for (final topic in topics) {
-        debugPrint('📡 MQTT: Subscribing to: $topic');
-        client.subscribe(topic, MqttQos.atLeastOnce);
-      }
-      debugPrint('✅ MQTT: All subscriptions requested');
-    } catch (e) {
-      debugPrint('❌ MQTT: Subscription error: $e');
+      _client!.subscribe(topic, MqttQos.atLeastOnce);
+      _subscriptions[topic] = onMessage;
+    } catch (e) {}
+  }
+
+  static void unsubscribe(String topic) {
+    if (_client == null || !_isConnected || _isDisposing) {
+      return;
     }
+    try {
+      _client?.unsubscribe(topic);
+      _subscriptions.remove(topic);
+    } catch (e) {
+      _subscriptions.remove(topic);
+    }
+  }
+
+  static Future<void> publishMessage(String topic, Map<String, dynamic> message) async {
+    if (_client == null || !_isConnected || _isDisposing) {
+      return;
+    }
+    try {
+      final builder = MqttClientPayloadBuilder();
+      builder.addString(json.encode(message));
+      _client!.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
+    } catch (e) {}
+  }
+
+  static Future<void> disconnect() async {
+    await _cleanupClient();
+    _currentSerialNumber = null;
   }
 
   static Future<bool> openCompartment({
@@ -235,44 +184,40 @@ class MqttService {
     required String userId,
     required int compartmentId,
   }) async {
-    debugPrint('📤 MQTT: ===== OPENING COMPARTMENT =====');
-    debugPrint('👤 MQTT: User ID: $userId');
-    debugPrint('📦 MQTT: Compartment ID: $compartmentId');
     final client = _client;
-    if (!_isConnected || client == null) {
-      debugPrint('❌ MQTT: Cannot send command - not connected');
+    if (!_isConnected || client == null || _isDisposing) {
       return false;
     }
     final message = {
       'id_usuario': userId,
+      'id_drawer': compartmentId,
       'valor': 1,
+      'source': 'mobile',
     };
-    debugPrint('📍 MQTT: Publishing to topic: $topic');
-    debugPrint('📄 MQTT: Message: $message');
     return await _publishMessage(client, topic, message);
   }
 
   static Future<bool> activateAlarm({required String topic}) async {
-    debugPrint('📤 MQTT: ===== ACTIVATING ALARM =====');
     final client = _client;
-    if (!_isConnected || client == null) {
-      debugPrint('❌ MQTT: Cannot send alarm - not connected');
+    if (!_isConnected || client == null || _isDisposing) {
       return false;
     }
-    final message = {'value': true};
-    debugPrint('📍 MQTT: Publishing alarm to topic: $topic');
+    final message = {
+      'value': true,
+      'source': 'mobile',
+    };
     return await _publishMessage(client, topic, message);
   }
 
   static Future<bool> takePicture({required String topic}) async {
-    debugPrint('📤 MQTT: ===== TAKING PICTURE =====');
     final client = _client;
-    if (!_isConnected || client == null) {
-      debugPrint('❌ MQTT: Cannot send picture command - not connected');
+    if (!_isConnected || client == null || _isDisposing) {
       return false;
     }
-    final message = {'value': true};
-    debugPrint('📍 MQTT: Publishing picture command to topic: $topic');
+    final message = {
+      'value': true,
+      'source': 'mobile',
+    };
     return await _publishMessage(client, topic, message);
   }
 
@@ -285,45 +230,10 @@ class MqttService {
       final payload = json.encode(message);
       final builder = MqttClientPayloadBuilder();
       builder.addString(payload);
-      debugPrint('📤 MQTT: Publishing message...');
       client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
-      debugPrint('✅ MQTT: Message published successfully');
-      debugPrint('📍 MQTT: Topic: $topic');
-      debugPrint('📄 MQTT: Payload: $payload');
       return true;
     } catch (e) {
-      debugPrint('❌ MQTT: Publish error: $e');
       return false;
     }
-  }
-
-  static Future<void> _cleanupClient() async {
-    try {
-      _isConnected = false;
-      if (_client != null) {
-        debugPrint('🧹 MQTT: Cleaning up existing client...');
-        _client?.disconnect();
-        _client = null;
-      }
-    } catch (e) {
-      debugPrint('⚠️ MQTT: Cleanup error: $e');
-      _client = null;
-      _isConnected = false;
-    }
-  }
-
-  static Future<void> disconnect() async {
-    debugPrint('🔌 MQTT: ===== DISCONNECTING =====');
-    await _cleanupClient();
-    _currentLocation = null;
-    _currentLockerId = null;
-    debugPrint('✅ MQTT: Disconnected and cleaned up');
-  }
-
-  static String get connectionStatus {
-    if (!_isConnected) return 'Disconnected';
-    final client = _client;
-    if (client?.secure == true) return 'Connected (SSL)';
-    return 'Connected (Insecure)';
   }
 }

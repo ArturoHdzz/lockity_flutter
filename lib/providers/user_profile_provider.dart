@@ -52,7 +52,6 @@ class UserProfileProvider extends ChangeNotifier {
     required String name,
     required String lastName,
     required String secondLastName,
-    required String email,
   }) async {
     if (_state == UserProfileState.updating || _disposed) return false;
 
@@ -64,7 +63,6 @@ class UserProfileProvider extends ChangeNotifier {
         name: name.trim(),
         lastName: lastName.trim(),
         secondLastName: secondLastName.trim(),
-        email: email.trim(),
       );
 
       _user = await _updateUserUseCase.execute(request);

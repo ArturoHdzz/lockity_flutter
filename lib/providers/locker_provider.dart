@@ -25,12 +25,15 @@ class LockerProvider extends ChangeNotifier {
   Compartment? _selectedCompartment;
   String? _errorMessage;
 
+  LockerConfigResponse? _lockerConfig;
+
   LockerState get state => _state;
   List<Locker> get lockers => List.unmodifiable(_lockers);
   Locker? get selectedLocker => _selectedLocker;
   List<Compartment> get compartments => List.unmodifiable(_compartments);
   Compartment? get selectedCompartment => _selectedCompartment;
   String? get errorMessage => _errorMessage;
+  LockerConfigResponse? get lockerConfig => _lockerConfig;
 
   bool get isLoading => _state == LockerState.loading;
   bool get isOperating => _state == LockerState.operating;
@@ -42,12 +45,10 @@ class LockerProvider extends ChangeNotifier {
 
   Future<void> loadLockers() async {
     if (_state == LockerState.loading) return;
-
     _setState(LockerState.loading);
     _clearError();
     _lockers.clear();
     _clearSelection();
-
     try {
       final request = const LockerListRequest();
       final response = await _getLockersUseCase.execute(request);
@@ -58,16 +59,11 @@ class LockerProvider extends ChangeNotifier {
     }
   }
 
-  LockerConfigResponse? _lockerConfig;
-
-  LockerConfigResponse? get lockerConfig => _lockerConfig;
-
   Future<void> selectLocker(Locker locker) async {
     _selectedLocker = locker;
+    _compartments = locker.compartments;
     _selectedCompartment = locker.compartments.isNotEmpty ? locker.compartments.first : null;
     notifyListeners();
-
-    // Solo carga la config, NO los compartimentos
     final config = await _getLockersUseCase.repository.getLockerConfig(locker.serialNumber);
     _lockerConfig = config;
   }
@@ -83,9 +79,7 @@ class LockerProvider extends ChangeNotifier {
     }
     _setState(LockerState.operating);
     _clearError();
-
     try {
-      debugPrint('🏠 PROVIDER: Starting compartment open operation');
       final topic = _lockerConfig?.topics['toggle'];
       if (topic == null) throw Exception('No topic for toggle');
       await _controlLockerUseCase.openCompartment(
@@ -93,29 +87,25 @@ class LockerProvider extends ChangeNotifier {
         compartmentId: _selectedCompartment!.id,
         topic: topic, 
       );
-
       final updatedCompartments = _compartments.map((comp) {
         if (comp.id == _selectedCompartment!.id) {
           return Compartment(
             id: comp.id,
             compartmentNumber: comp.compartmentNumber,
             status: 'open',
+            userId: comp.userId,
             users: comp.users,
           );
         }
         return comp;
       }).toList();
-
       _compartments = updatedCompartments;
       _selectedCompartment = updatedCompartments.firstWhere(
         (comp) => comp.id == _selectedCompartment!.id,
       );
-
-      debugPrint('✅ PROVIDER: Compartment operation completed successfully');
       _setState(LockerState.loaded);
       return true;
     } catch (e) {
-      debugPrint('❌ PROVIDER: Compartment operation failed: $e');
       _setError(_extractUserFriendlyMessage(e.toString()));
       return false;
     }
@@ -123,12 +113,9 @@ class LockerProvider extends ChangeNotifier {
 
   Future<bool> activateAlarm() async {
     if (_selectedLocker == null || isOperating) return false;
-
     _setState(LockerState.operating);
     _clearError();
-
     try {
-      debugPrint('🔎 Topics disponibles (activateAlarm): ${_lockerConfig?.topics}');
       final topic = _lockerConfig?.topics['alarm'];
       if (topic == null) throw Exception('No topic for alarm');
       await _controlLockerUseCase.activateAlarm(
@@ -145,12 +132,9 @@ class LockerProvider extends ChangeNotifier {
 
   Future<bool> takePicture() async {
     if (_selectedLocker == null || isOperating) return false;
-
     _setState(LockerState.operating);
     _clearError();
-
     try {
-      debugPrint('🔎 Topics disponibles (takePicture): ${_lockerConfig?.topics}');
       final topic = _lockerConfig?.topics['picture'];
       if (topic == null) throw Exception('No topic for picture');
       await _controlLockerUseCase.takePicture(

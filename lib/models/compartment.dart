@@ -2,22 +2,25 @@ class Compartment {
   final int id;
   final int compartmentNumber;
   final String status;
+  final int userId;
   final List<CompartmentUser> users;
 
   const Compartment({
     required this.id,
     required this.compartmentNumber,
     required this.status,
+    required this.userId,
     required this.users,
   });
 
-  factory Compartment.fromJson(Map<String, dynamic> json) {
+  factory Compartment.fromJson(Map<String, dynamic> json, int userId) {
     final usersList = json['users'] as List<dynamic>? ?? [];
     
     return Compartment(
-      id: _parseInt(json['id']),
+      id: _parseInt(json['compartment_id'] ?? json['id']), 
       compartmentNumber: _parseInt(json['compartment_number']),
       status: _parseString(json['status']),
+      userId: userId,
       users: usersList.map((user) => CompartmentUser.fromJson(user)).toList(),
     );
   }
@@ -27,6 +30,7 @@ class Compartment {
       id: _parseInt(json['compartment_id']),
       compartmentNumber: _parseInt(json['compartment_number']),
       status: '', 
+      userId: 0,
       users: const [],
     );
   }

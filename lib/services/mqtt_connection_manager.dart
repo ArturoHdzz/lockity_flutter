@@ -10,38 +10,36 @@ class MqttConnectionManager extends ChangeNotifier {
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
 
-  Future<void> connect({required String location, required int lockerId}) async {
+  Future<void> connect({required String serialNumber}) async {
     if (_isConnecting || _isConnected) return;
     _isConnecting = true;
     notifyListeners();
 
     final connected = await MqttService.connect(
-      location: location,
-      lockerId: lockerId,
+      serialNumber: serialNumber,
       onDisconnected: () {
         _isConnected = false;
         notifyListeners();
-        _scheduleReconnect(location, lockerId);
+        _scheduleReconnect(serialNumber);
       },
     );
     _isConnected = connected;
     _isConnecting = false;
     notifyListeners();
 
-    if (!connected) _scheduleReconnect(location, lockerId);
+    if (!connected) _scheduleReconnect(serialNumber);
   }
 
-  void _scheduleReconnect(String location, int lockerId) {
+  void _scheduleReconnect(String serialNumber) {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(seconds: 5), () {
-      connect(location: location, lockerId: lockerId);
+      connect(serialNumber: serialNumber);
     });
   }
 
   void onDisconnected() {
     _isConnected = false;
     notifyListeners();
-    // Puedes guardar el último locker/location y reintentar
   }
 
   Future<void> disconnect() async {

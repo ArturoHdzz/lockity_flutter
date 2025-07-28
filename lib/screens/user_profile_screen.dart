@@ -24,7 +24,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     TextEditingController(),
     TextEditingController(),
     TextEditingController(),
-    TextEditingController(),
   ];
 
   @override
@@ -65,7 +64,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _controllers[0].text = user.name;
     _controllers[1].text = user.lastName;
     _controllers[2].text = user.secondLastName;
-    _controllers[3].text = user.email;
   }
 
   Future<void> _loadUserProfile() => _provider.loadUserProfile();
@@ -77,10 +75,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       name: TextFormatters.formatName(_controllers[0].text),
       lastName: TextFormatters.formatName(_controllers[1].text),
       secondLastName: TextFormatters.formatName(_controllers[2].text),
-      email: _controllers[3].text.trim().toLowerCase(),
     );
 
-    if (success) FocusScope.of(context).unfocus();
+    if (success) {
+      FocusScope.of(context).unfocus();
+      await _provider.loadUserProfile();
+    }
   }
 
   void _showSuccessMessage() {
@@ -312,7 +312,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ('First Name', _validateName),
       ('Last Name', _validateName),
       ('Second Last Name', _validateName),
-      ('Email', _validateEmail),
     ];
 
     return fieldData.asMap().entries.map((entry) {

@@ -8,6 +8,7 @@ import 'package:lockity_flutter/services/oauth_service.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final http.Client _httpClient;
+  User? _user;
 
   UserRepositoryImpl({http.Client? httpClient}) 
     : _httpClient = httpClient ?? http.Client();
@@ -19,7 +20,6 @@ class UserRepositoryImpl implements UserRepository {
       if (token == null) {
         throw const UserRepositoryException._internal('Authentication required');
       }
-
       final response = await _httpClient.get(
         Uri.parse(AppConfig.userMeUrl),
         headers: {
@@ -27,8 +27,9 @@ class UserRepositoryImpl implements UserRepository {
           'Content-Type': 'application/json',
         },
       ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
-      return _handleResponse(response, _parseUserResponse);
+      final user = await _handleResponse(response, _parseUserResponse);
+      _user = user;
+      return user;
     } on UserRepositoryException {
       rethrow;
     } catch (e) {
@@ -45,7 +46,6 @@ class UserRepositoryImpl implements UserRepository {
       if (token == null) {
         throw const UserRepositoryException._internal('Authentication required');
       }
-
       final response = await _httpClient.put(
         Uri.parse(AppConfig.userMeUrl),
         headers: {
@@ -54,12 +54,12 @@ class UserRepositoryImpl implements UserRepository {
         },
         body: json.encode(request.toJson()),
       ).timeout(Duration(seconds: AppConfig.httpTimeout));
-
       if (response.statusCode == 422) {
         return _handleValidationErrors(response);
       }
-
-      return _handleResponse(response, _parseUserResponse);
+      final user = await _handleResponse(response, _parseUserResponse);
+      _user = user;
+      return user;
     } on UserRepositoryException {
       rethrow;
     } catch (e) {
@@ -94,20 +94,20 @@ class UserRepositoryImpl implements UserRepository {
 
   T _parseSuccessResponse<T>(http.Response response, T Function(Map<String, dynamic>) parser) {
     final responseData = _decodeResponse(response);
-    
     if (responseData['success'] != true) {
       throw UserRepositoryException._server(
         responseData['message'] ?? 'Request was not successful.'
       );
     }
-
     final data = responseData['data'] as Map<String, dynamic>?;
     if (data == null) {
+      if (_user != null && T == User) {
+        return _user as T;
+      }
       throw const UserRepositoryException._format(
-        'Server response is incomplete. Please try again.'
+        'Profile updated, but no user data returned. Please reload your profile.'
       );
     }
-
     try {
       return parser(data);
     } catch (e) {
@@ -122,12 +122,10 @@ class UserRepositoryImpl implements UserRepository {
   User _handleValidationErrors(http.Response response) {
     final responseData = _decodeResponse(response);
     final errors = responseData['errors'] as Map<String, dynamic>?;
-    
     if (errors != null) {
       final userFriendlyErrors = _convertToUserFriendlyErrors(errors);
       throw UserRepositoryException._validation(userFriendlyErrors.join(' '));
     }
-    
     throw UserRepositoryException._validation(
       responseData['message'] ?? 'Please check your information and try again.'
     );
@@ -145,7 +143,6 @@ class UserRepositoryImpl implements UserRepository {
 
   List<String> _convertToUserFriendlyErrors(Map<String, dynamic> errors) {
     final userFriendlyErrors = <String>[];
-    
     errors.forEach((field, messages) {
       if (messages is List) {
         for (String message in messages.cast<String>()) {
@@ -156,7 +153,6 @@ class UserRepositoryImpl implements UserRepository {
         }
       }
     });
-    
     return userFriendlyErrors.isEmpty 
       ? ['Please check your information and try again.']
       : userFriendlyErrors;
@@ -165,37 +161,30 @@ class UserRepositoryImpl implements UserRepository {
   String _translateError(String field, String technicalMessage) {
     final lowerMessage = technicalMessage.toLowerCase();
     final lowerField = field.toLowerCase();
-    
     if (lowerMessage.contains('must not be greater than') || 
         lowerMessage.contains('too long')) {
       return '${_getFieldDisplayName(lowerField)} is too long. Please use fewer characters.';
     }
-    
     if (lowerMessage.contains('contain only letters') ||
         lowerMessage.contains('letters and spaces')) {
       return '${_getFieldDisplayName(lowerField)} can only contain letters and spaces.';
     }
-    
     if (lowerMessage.contains('must be at least') ||
         lowerMessage.contains('too short')) {
       return '${_getFieldDisplayName(lowerField)} must be at least 3 characters long.';
     }
-    
     if (lowerMessage.contains('valid email') ||
         lowerMessage.contains('invalid email')) {
       return 'Please enter a valid email address.';
     }
-    
     if (lowerMessage.contains('already been taken') ||
         lowerMessage.contains('already exists')) {
       return 'This email is already registered. Please use a different email address.';
     }
-    
     if (lowerMessage.contains('required') ||
         lowerMessage.contains('cannot be empty')) {
       return '${_getFieldDisplayName(lowerField)} is required.';
     }
-    
     return technicalMessage;
   }
 
