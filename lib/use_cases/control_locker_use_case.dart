@@ -43,8 +43,11 @@ class ControlLockerUseCase {
         );
       }
 
+      final serialNumber = topic.split('/').first;
       final updateRequest = UpdateLockerStatusRequest(
         lockerId: lockerId,
+        serialNumber: serialNumber,
+        compartmentNumber: compartmentId,
         status: LockerStatus.open,
       );
 

@@ -24,10 +24,14 @@ class LockerListRequest {
 
 class UpdateLockerStatusRequest {
   final int lockerId;
+  final String serialNumber;
+  final int compartmentNumber;
   final LockerStatus status;
 
   const UpdateLockerStatusRequest({
     required this.lockerId,
+    required this.serialNumber,
+    required this.compartmentNumber,
     required this.status,
   });
 

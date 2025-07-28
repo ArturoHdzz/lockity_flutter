@@ -39,11 +39,11 @@ class LockerRepositoryImpl implements LockerRepository {
     if (token == null) {
       throw const LockerRepositoryException._session('Authentication required');
     }
-    final url = '${AppConfig.baseUrl}/api/lockers/${request.lockerId}/${request.statusString}';
+    final url = '${AppConfig.lockerConfigEndpoint}/${request.serialNumber}/${request.compartmentNumber}/${request.statusString}';
     final response = await _httpClient.put(
       Uri.parse(url),
       headers: {
-        ...token.authHeaders,
+        'x-iot-key': AppConfig.iotSecretKey,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
