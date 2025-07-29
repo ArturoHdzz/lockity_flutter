@@ -9,6 +9,7 @@ import 'package:lockity_flutter/repositories/audit_log_repository_impl.dart';
 import 'package:lockity_flutter/use_cases/get_audit_logs_use_case.dart';
 import 'package:lockity_flutter/repositories/audit_log_repository_mock.dart';
 import 'package:lockity_flutter/core/app_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RecordScreen extends StatefulWidget {
   final String? lockerSerialNumber;
@@ -343,6 +344,17 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Widget _buildAuditLogCard(AuditLog auditLog) {
+    final locker = auditLog.locker;
+    final photoPath = auditLog.photoPath;
+    final timestamp = auditLog.timestamp ?? '';
+    final action = auditLog.action ?? '';
+    final source = auditLog.source ?? '';
+    final compartment = locker?.manipulatedCompartment?.toString() ?? '-';
+    final org = locker?.organizationName ?? '';
+    final area = locker?.areaName ?? '';
+    final serial = locker?.serialNumber ?? '';
+    final email = auditLog.performedBy.email;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -359,14 +371,63 @@ class _RecordScreenState extends State<RecordScreen> {
         children: [
           _buildCardHeader(auditLog),
           const SizedBox(height: 8),
+          Text('Action: $action', style: AppTextStyles.bodySmall),
+          Text('Source: $source', style: AppTextStyles.bodySmall),
+          Text('Compartment: $compartment', style: AppTextStyles.bodySmall),
+          Text('Serial: $serial', style: AppTextStyles.bodySmall),
+          Text('Organization: $org', style: AppTextStyles.bodySmall),
+          Text('Area: $area', style: AppTextStyles.bodySmall),
+          Text('Email: $email', style: AppTextStyles.bodySmall),
+          Text('Date: $timestamp', style: AppTextStyles.bodySmall),
+          if (photoPath != null && photoPath.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.image),
+                label: const Text('See image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.buttons,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                onPressed: () async {
+                  final signedUrl = await _getSupabaseSignedUrl(photoPath);
+                  if (signedUrl != null) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        content: Image.network(signedUrl),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Image not available')),
+                    );
+                  }
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
           _buildCardDescription(auditLog),
-          if (auditLog.locker != null) ...[
+          if (locker != null) ...[
             const SizedBox(height: 8),
-            _buildCardLocation(auditLog.locker!),
+            _buildCardLocation(locker),
           ],
         ],
       ),
     );
+  }
+
+  Future<String?> _getSupabaseSignedUrl(String photoPath) async {
+    try {
+      final response = await Supabase.instance.client.storage
+        .from('lockity-images')
+        .createSignedUrl(photoPath, 60 * 2);
+      return response;
+    } catch (e) {
+      print('Error getting URL from Supabase: $e');
+      return null;
+    }
   }
 
   Widget _buildCardHeader(AuditLog auditLog) {

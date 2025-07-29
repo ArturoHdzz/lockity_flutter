@@ -4,6 +4,10 @@ class AuditLog {
   final LockerInfo? locker;
   final UserInfo? targetUser;
   final String description;
+  final String? photoPath;
+  final String? timestamp;
+  final String? action;
+  final String? source;
 
   const AuditLog({
     required this.id,
@@ -11,6 +15,10 @@ class AuditLog {
     this.locker,
     this.targetUser,
     required this.description,
+    this.photoPath,
+    this.timestamp,
+    this.action,
+    this.source,
   });
 
   factory AuditLog.fromJson(Map<String, dynamic> json) {
@@ -20,6 +28,10 @@ class AuditLog {
       locker: json['locker'] != null ? LockerInfo.fromJson(json['locker']) : null,
       targetUser: json['target_user'] != null ? UserInfo.fromJson(json['target_user']) : null,
       description: _parseString(json['description']),
+      photoPath: json['photo_path']?.toString(),
+      timestamp: json['timestamp']?.toString(),
+      action: json['action']?.toString(),
+      source: json['source']?.toString(),
     );
   }
 
@@ -42,6 +54,10 @@ class AuditLog {
       'locker': locker?.toJson(),
       'target_user': targetUser?.toJson(),
       'description': description,
+      'photo_path': photoPath,
+      'timestamp': timestamp,
+      'action': action,
+      'source': source,
     };
   }
 

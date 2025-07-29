@@ -9,12 +9,16 @@ import 'package:lockity_flutter/screens/home_screen.dart';
 import 'package:lockity_flutter/screens/loading_screen.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 import 'package:lockity_flutter/services/navigation_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await AppConfig.load();
-  
+  await dotenv.load(fileName: 'assets/config/.env');
+  await Supabase.initialize(
+    url: 'https://guikspbicskovcmvfvwb.supabase.co',
+    anonKey: 'sb_secret_SG4tyyhGy1_1Fdmgod1a4g_VIq4pftg',
+  );
   runApp(const MyApp());
 }
 
