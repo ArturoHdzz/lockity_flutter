@@ -45,11 +45,6 @@ class AppDrawer extends StatelessWidget {
         title: 'My Lockers',
         onTap: () => NavigationService.navigateToMyLockers(context),
       ),
-      _MenuItem(
-        icon: Icons.notifications_outlined,
-        title: 'Record',
-        onTap: () => NavigationService.navigateToRecord(context),
-      ),
     ];
 
     return menuItems;
