@@ -288,6 +288,7 @@ class OAuthService {
       'state': state,
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
+      'device': 'mobile',
     };
 
     final authorizeUrl = Uri.parse(AppConfig.authUrl)

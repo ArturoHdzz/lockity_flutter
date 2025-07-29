@@ -9,6 +9,8 @@ import 'package:lockity_flutter/repositories/locker_repository_impl.dart';
 import 'package:lockity_flutter/screens/fingerprint_registration_screen.dart';
 import 'package:lockity_flutter/screens/record_screen.dart';
 
+import '../services/oauth_service.dart';
+
 class MyLockersScreen extends StatefulWidget {
   const MyLockersScreen({super.key});
 
@@ -26,7 +28,22 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchLockers();
+    _waitForAuthAndFetchLockers();
+  }
+
+  Future<void> _waitForAuthAndFetchLockers() async {
+    for (int i = 0; i < 10; i++) {
+      final token = await OAuthService.getStoredToken();
+      if (token != null) {
+        await _fetchLockers();
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    setState(() {
+      _loadingLockers = false;
+      _errorMessage = 'Failed to authenticate. Please try again.';
+    });
   }
 
   @override
