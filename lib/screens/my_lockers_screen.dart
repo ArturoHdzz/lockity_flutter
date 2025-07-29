@@ -7,6 +7,7 @@ import 'package:lockity_flutter/models/locker.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/repositories/locker_repository_impl.dart';
 import 'package:lockity_flutter/screens/fingerprint_registration_screen.dart';
+import 'package:lockity_flutter/screens/record_screen.dart';
 
 class MyLockersScreen extends StatefulWidget {
   const MyLockersScreen({super.key});
@@ -90,7 +91,6 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
   void _showFingerprintRegistration(String serialNumber, String userId) {
     if (!mounted) return;
     
-    // Validar que tenemos los datos necesarios
     if (serialNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -201,18 +201,34 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          
-          // Header
-          Text(
-            'My Lockers',
-            style: AppTextStyles.headingMedium.copyWith(
-              color: AppColors.text,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Lockers',
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (_selectedLocker != null)
+                IconButton(
+                  icon: const Icon(Icons.list_alt, color: AppColors.buttons),
+                  tooltip: 'View Logs',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RecordScreen(
+                          lockerSerialNumber: _selectedLocker!.serialNumber,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
           ),
           const SizedBox(height: 24),
           
-          // Dropdown de lockers
           if (_loadingLockers)
             const Center(child: CircularProgressIndicator())
           else if (_errorMessage != null)
@@ -266,7 +282,6 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
           
           const SizedBox(height: 24),
           
-          // Lista de compartimentos
           Expanded(
             child: _buildCompartmentsList(),
           ),
@@ -325,7 +340,6 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
         itemBuilder: (context, index) {
           final comp = compartments[index];
           
-          // Obtener el primer usuario asignado al compartimento
           final userId = comp.userId.toString();
           
           return Padding(

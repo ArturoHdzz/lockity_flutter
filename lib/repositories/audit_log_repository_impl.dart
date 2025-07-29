@@ -20,9 +20,17 @@ class AuditLogRepositoryImpl implements AuditLogRepository {
         throw const AuditLogRepositoryException._session('Authentication required');
       }
 
-      final uri = Uri.parse(AppConfig.auditLogsUrl).replace(
-        queryParameters: request.toQueryParameters(),
+      final serial = request.lockerSerialNumber;
+      print('[AuditLogRepo] Serial recibido: $serial');
+      if (serial == null || serial.isEmpty) {
+        throw Exception('Locker serial number is required');
+      }
+
+      final baseUrl = AppConfig.auditLogsUrl;
+      final uri = Uri.parse('$baseUrl/$serial').replace(
+        queryParameters: request.toQueryParameters()..remove('lockerSerialNumber'),
       );
+      print('[AuditLogRepo] URL final: $uri');
 
       final response = await _httpClient.get(
         uri,
@@ -32,10 +40,14 @@ class AuditLogRepositoryImpl implements AuditLogRepository {
         },
       ).timeout(Duration(seconds: AppConfig.httpTimeout));
 
+      print('[AuditLogRepo] Status: ${response.statusCode}');
+      print('[AuditLogRepo] Body: ${response.body}');
+
       return _handleResponse(response);
     } on AuditLogRepositoryException {
       rethrow;
     } catch (e) {
+      print('[AuditLogRepo] Error: $e');
       throw AuditLogRepositoryException._network(
         'Please check your internet connection and try again.',
       );

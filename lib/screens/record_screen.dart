@@ -11,7 +11,9 @@ import 'package:lockity_flutter/repositories/audit_log_repository_mock.dart';
 import 'package:lockity_flutter/core/app_config.dart';
 
 class RecordScreen extends StatefulWidget {
-  const RecordScreen({super.key});
+  final String? lockerSerialNumber;
+
+  const RecordScreen({super.key, this.lockerSerialNumber});
 
   @override
   State<RecordScreen> createState() => _RecordScreenState();
@@ -50,7 +52,6 @@ class _RecordScreenState extends State<RecordScreen> {
   // }
 
   void _initializeProvider() {
-    // SWITCH SIMPLE: Mock vs Real
     final repository = AppConfig.useMockAuditLogs 
       ? AuditLogRepositoryMock()
       : AuditLogRepositoryImpl();
@@ -76,9 +77,11 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _loadAuditLogs() async {
+    print('[RecordScreen] Serial recibido: ${widget.lockerSerialNumber}');
     final request = AuditLogRequest(
       dateFrom: _selectedDateFrom,
       dateTo: _selectedDateTo,
+      lockerSerialNumber: widget.lockerSerialNumber,
     );
     await _provider.loadAuditLogs(request: request);
   }
@@ -162,18 +165,25 @@ class _RecordScreenState extends State<RecordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildFilterDropdown(),
-          const SizedBox(height: 20),
-          _buildContent(),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.text),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            _buildHeader(),
+            const SizedBox(height: 16), 
+            _buildFilterDropdown(),
+            const SizedBox(height: 16),
+            _buildContent(),
+          ],
+        ),
       ),
     );
   }
@@ -183,7 +193,7 @@ class _RecordScreenState extends State<RecordScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Audit Logs',
+          'Access Logs',
           style: AppTextStyles.headingMedium.copyWith(
             color: AppColors.text,
             fontWeight: FontWeight.w600,

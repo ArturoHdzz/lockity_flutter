@@ -4,6 +4,7 @@ class AuditLogRequest {
   final int? userId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
+  final String? lockerSerialNumber;
 
   const AuditLogRequest({
     this.page = 1,
@@ -11,6 +12,7 @@ class AuditLogRequest {
     this.userId,
     this.dateFrom,
     this.dateTo,
+    this.lockerSerialNumber,
   });
 
   Map<String, String> toQueryParameters() {
@@ -31,6 +33,10 @@ class AuditLogRequest {
       params['date_to'] = _formatDate(dateTo!);
     }
 
+    if (lockerSerialNumber != null) {
+      params['lockerSerialNumber'] = lockerSerialNumber!;
+    }
+
     return params;
   }
 
@@ -46,6 +52,7 @@ class AuditLogRequest {
     int? userId,
     DateTime? dateFrom,
     DateTime? dateTo,
+    String? lockerSerialNumber,
   }) {
     return AuditLogRequest(
       page: page ?? this.page,
@@ -53,6 +60,7 @@ class AuditLogRequest {
       userId: userId ?? this.userId,
       dateFrom: dateFrom ?? this.dateFrom,
       dateTo: dateTo ?? this.dateTo,
+      lockerSerialNumber: lockerSerialNumber ?? this.lockerSerialNumber,
     );
   }
 

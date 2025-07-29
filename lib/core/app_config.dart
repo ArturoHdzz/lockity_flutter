@@ -22,7 +22,7 @@ class AppConfig {
   static String get userMeUrl => '$baseUrl$userMeEndpoint';
   static String get logoutUrl => '$baseUrl$logoutEndpoint';
   static String get webLogoutUrl => '$baseUrl$webLogoutEndpoint';
-  static String get auditLogsUrl => '$baseUrl$auditLogsEndpoint';
+  static String get auditLogsUrl => dotenv.env['AUDIT_LOGS_ENDPOINT'] ?? 'http://64.23.237.187:8002/api/access-logs';
   static String get lockersUrl => dotenv.env['LOCKERS_ENDPOINT'] ?? '$baseUrl/api/lockers';
   static String get lockerConfigEndpoint => dotenv.env['LOCKER_CONFIG_ENDPOINT'] ?? '$baseUrl/api/locker-config';
 
