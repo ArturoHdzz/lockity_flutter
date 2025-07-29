@@ -348,16 +348,12 @@ class _RecordScreenState extends State<RecordScreen> {
     final photoPath = auditLog.photoPath;
     final timestamp = auditLog.timestamp ?? '';
     final action = auditLog.action ?? '';
-    final source = auditLog.source ?? '';
-    final compartment = locker?.manipulatedCompartment?.toString() ?? '-';
-    final org = locker?.organizationName ?? '';
-    final area = locker?.areaName ?? '';
     final serial = locker?.serialNumber ?? '';
-    final email = auditLog.performedBy.email;
+    final user = auditLog.performedBy.fullName;
+    final role = auditLog.performedBy.role;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(8),
@@ -366,18 +362,68 @@ class _RecordScreenState extends State<RecordScreen> {
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        title: Row(
+          children: [
+            Container(
+              width: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getRoleColor(role),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                role.toUpperCase(),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                user,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  action,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.text.withOpacity(0.7),
+                  ),
+                ),
+                Text(
+                  timestamp.split('T').first,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.text.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         children: [
-          _buildCardHeader(auditLog),
-          const SizedBox(height: 8),
-          Text('Action: $action', style: AppTextStyles.bodySmall),
-          Text('Source: $source', style: AppTextStyles.bodySmall),
-          Text('Compartment: $compartment', style: AppTextStyles.bodySmall),
+          const Divider(),
+          Text('Full Name: $user', style: AppTextStyles.bodySmall),
+          Text('Source: ${auditLog.source}', style: AppTextStyles.bodySmall),
+          Text('Compartment: ${locker?.manipulatedCompartment ?? "-"}', style: AppTextStyles.bodySmall),
           Text('Serial: $serial', style: AppTextStyles.bodySmall),
-          Text('Organization: $org', style: AppTextStyles.bodySmall),
-          Text('Area: $area', style: AppTextStyles.bodySmall),
-          Text('Email: $email', style: AppTextStyles.bodySmall),
+          Text('Organization: ${locker?.organizationName ?? ""}', style: AppTextStyles.bodySmall),
+          Text('Area: ${locker?.areaName ?? ""}', style: AppTextStyles.bodySmall),
+          Text('Email: ${auditLog.performedBy.email}', style: AppTextStyles.bodySmall),
           Text('Date: $timestamp', style: AppTextStyles.bodySmall),
           if (photoPath != null && photoPath.isNotEmpty)
             Padding(
@@ -393,11 +439,57 @@ class _RecordScreenState extends State<RecordScreen> {
                 onPressed: () async {
                   final signedUrl = await _getSupabaseSignedUrl(photoPath);
                   if (signedUrl != null) {
-                    showDialog(
+                    showGeneralDialog(
                       context: context,
-                      builder: (_) => AlertDialog(
-                        content: Image.network(signedUrl),
-                      ),
+                      barrierDismissible: true,
+                      barrierLabel: 'Image',
+                      transitionDuration: const Duration(milliseconds: 250),
+                      pageBuilder: (context, anim1, anim2) {
+                        return GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            color: Colors.black.withOpacity(0.85),
+                            child: Center(
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                                    child: InteractiveViewer(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(18),
+                                        child: Image.network(
+                                          signedUrl,
+                                          fit: BoxFit.contain,
+                                          width: MediaQuery.of(context).size.width * 0.85,
+                                          height: MediaQuery.of(context).size.height * 0.6,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return SizedBox(
+                                              width: 120,
+                                              height: 120,
+                                              child: Center(child: CircularProgressIndicator()),
+                                            );
+                                          },
+                                          errorBuilder: (context, error, stackTrace) =>
+                                            const Icon(Icons.broken_image, color: Colors.white, size: 80),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 24,
+                                    right: 24,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                                      onPressed: () => Navigator.of(context).pop(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -428,44 +520,6 @@ class _RecordScreenState extends State<RecordScreen> {
       print('Error getting URL from Supabase: $e');
       return null;
     }
-  }
-
-  Widget _buildCardHeader(AuditLog auditLog) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getRoleColor(auditLog.performedBy.role),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            auditLog.performedBy.role.toUpperCase(),
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            auditLog.performedBy.fullName,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.text,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Text(
-          'ID: ${auditLog.id}',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.text.withOpacity(0.6),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildCardDescription(AuditLog auditLog) {
