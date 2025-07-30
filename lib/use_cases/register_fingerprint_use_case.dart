@@ -26,12 +26,12 @@ class RegisterFingerprintUseCase {
           serialNumber: serialNumber,
           onDisconnected: () {
             if (_isActive) {
-              _handleError(onError, 'Se perdió la conexión con el dispositivo');
+              _handleError(onError, 'Connection to the device was lost');
             }
           },
         );
         if (!connected) {
-          _handleError(onError, 'No se pudo conectar al servidor de huellas. Verifica tu conexión.');
+          _handleError(onError, 'Could not connect to the fingerprint server. Check your connection.');
           return;
         }
         await Future.delayed(const Duration(milliseconds: 500));
