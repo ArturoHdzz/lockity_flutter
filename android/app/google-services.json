@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "406945772227",
+    "project_id": "appnotificaciones-e02ce",
+    "storage_bucket": "appnotificaciones-e02ce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:406945772227:android:6055a23d482ce957006876",
+        "android_client_info": {
+          "package_name": "com.example.lockity_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAru1qZ5xgt-wKtlPSW9-DZ_1EQkksgbZc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
