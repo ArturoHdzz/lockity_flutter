@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 import 'package:lockity_flutter/components/connectivity_wrapper.dart';
@@ -18,6 +20,9 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://guikspbicskovcmvfvwb.supabase.co',
     anonKey: 'sb_secret_SG4tyyhGy1_1Fdmgod1a4g_VIq4pftg',
+  );
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(const MyApp());
 }
