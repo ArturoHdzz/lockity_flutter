@@ -67,22 +67,22 @@ class LockerCard extends StatelessWidget {
               ),
               Column(
                 children: [
-                  GestureDetector(
-                    onTap: onTap,
-                    child: Container(
-                      padding: const EdgeInsets.all(8.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFA726),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.black,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  // GestureDetector(
+                  //   onTap: onTap,
+                  //   child: Container(
+                  //     padding: const EdgeInsets.all(8.0),
+                  //     decoration: BoxDecoration(
+                  //       color: const Color(0xFFFFA726),
+                  //       borderRadius: BorderRadius.circular(8.0),
+                  //     ),
+                  //     child: const Icon(
+                  //       Icons.check,
+                  //       color: Colors.black,
+                  //       size: 20,
+                  //     ),
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 12),
                   GestureDetector(
                     onTap: onBiometric,
                     child: Container(

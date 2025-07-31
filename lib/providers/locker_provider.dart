@@ -176,12 +176,29 @@ class LockerProvider extends ChangeNotifier {
       .replaceAll('Exception: ', '');
   }
 
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   void _setState(LockerState newState) {
+    if (_isDisposed) return;
     _state = newState;
     notifyListeners();
   }
 
   void _setError(String error) {
+    if (_isDisposed) return;
     _errorMessage = error;
     _setState(LockerState.error);
   }

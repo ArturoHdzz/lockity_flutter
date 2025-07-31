@@ -514,6 +514,11 @@ class OAuthService {
       // 
     }
   }
+
+  static Future<String?> getAccessToken() async {
+    final token = await _tokenRepository.getToken();
+    return token?.accessToken;
+  }
 }
 
 class OAuthException implements Exception {

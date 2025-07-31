@@ -105,7 +105,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
     );
   }
 
-  void _showFingerprintRegistration(String serialNumber, String userId) {
+  void _showFingerprintRegistration(String serialNumber, String userId, int compartmentId) {
     if (!mounted) return;
     
     if (serialNumber.isEmpty) {
@@ -139,6 +139,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
       builder: (BuildContext context) => FingerprintRegistrationScreen(
         serialNumber: serialNumber,
         userId: userId,
+        compartmentId: compartmentId,
       ),
     ).then((result) {
       if (!mounted) return;
@@ -372,6 +373,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
               onBiometric: () => _showFingerprintRegistration(
                 _selectedLocker!.serialNumber,
                 userId,
+                comp.id, 
               ),
             ),
           );
