@@ -85,7 +85,7 @@ class LockerProvider extends ChangeNotifier {
       
       await _controlLockerUseCase.openCompartment(
         lockerId: _selectedLocker!.id,
-        compartmentId: _selectedCompartment!.id,
+        compartmentId: _selectedCompartment!.compartmentNumber,
         topic: topic, 
       );
       

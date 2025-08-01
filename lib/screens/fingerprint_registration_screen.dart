@@ -5,13 +5,13 @@ import 'package:lockity_flutter/models/fingerprint_message.dart';
 class FingerprintRegistrationScreen extends StatefulWidget {
   final String serialNumber;
   final String userId;
-  final int compartmentId; 
+  final int compartmentNumber;
 
   const FingerprintRegistrationScreen({
     super.key,
     required this.serialNumber,
     required this.userId,
-    required this.compartmentId, 
+    required this.compartmentNumber,
   });
 
   @override
@@ -55,7 +55,7 @@ class _FingerprintRegistrationScreenState extends State<FingerprintRegistrationS
     _useCase.start(
       serialNumber: widget.serialNumber,
       userId: userIdInt,
-      compartmentId: widget.compartmentId, 
+      compartmentNumber: widget.compartmentNumber,
       onStep: (FingerprintMessage step) {
         if (!mounted) return;
         final instruction = _getInstruction(step);

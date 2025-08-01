@@ -12,7 +12,7 @@ class RegisterFingerprintUseCase {
   Future<void> start({
     required String serialNumber,
     required int userId,
-    required int compartmentId, 
+    required int compartmentNumber, 
     required void Function(FingerprintMessage step) onStep,
     required void Function(String error) onError,
   }) async {
@@ -61,7 +61,7 @@ class RegisterFingerprintUseCase {
       final message = {
         'config': 1,
         'user_id': userId,
-        'id_drawer': compartmentId, 
+        'id_drawer': compartmentNumber,
         'source': 'mobile',
       };
       await MqttService.publishMessage(topic, message);
