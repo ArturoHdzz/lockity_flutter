@@ -350,7 +350,6 @@ class _RecordScreenState extends State<RecordScreen> {
     final action = auditLog.action ?? '';
     final serial = locker?.serialNumber ?? '';
     final user = auditLog.performedBy.fullName;
-    final role = auditLog.performedBy.role;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -368,19 +367,20 @@ class _RecordScreenState extends State<RecordScreen> {
         title: Row(
           children: [
             Container(
-              width: 70,
+              width: 80,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getRoleColor(role),
+                color: _getActionColor(action),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                role.toUpperCase(),
+                action.toUpperCase(),
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 10,
                 ),
+                textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -400,17 +400,18 @@ class _RecordScreenState extends State<RecordScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  action,
+                  timestamp.split('T').first,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.text.withOpacity(0.7),
                   ),
                 ),
-                Text(
-                  timestamp.split('T').first,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.text.withOpacity(0.6),
+                if (timestamp.contains('T'))
+                  Text(
+                    timestamp.split('T')[1].substring(0, 5),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.text.withOpacity(0.6),
+                    ),
                   ),
-                ),
               ],
             ),
           ],
@@ -560,16 +561,22 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  Color _getRoleColor(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
+  Color _getActionColor(String action) {
+    switch (action.toLowerCase()) {
+      case 'opening':
+      case 'open':
+        return Colors.green;
+      case 'closing':
+      case 'close':
+      case 'closed':
         return Colors.red;
-      case 'user':
-        return AppColors.buttons;
-      case 'manager':
+      case 'alarm':
+        return Colors.orange;
+      case 'picture':
+      case 'photo':
         return Colors.blue;
       default:
-        return AppColors.background;
+        return AppColors.buttons;
     }
   }
 }

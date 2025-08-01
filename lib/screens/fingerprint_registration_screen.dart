@@ -124,7 +124,7 @@ class _FingerprintRegistrationScreenState extends State<FingerprintRegistrationS
   Color _getIconColor() {
     if (_isSuccess) return Colors.green;
     if (_isError) return Colors.red;
-    return Colors.blueAccent;
+    return Colors.amber;
   }
 
   IconData _getIcon() {
