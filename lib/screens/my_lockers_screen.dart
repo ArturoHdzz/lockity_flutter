@@ -122,7 +122,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No user assigned to this compartment'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.buttons,
         ),
       );
       return;
@@ -153,9 +153,12 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
         );
       } else if (result == false) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fingerprint registration cancelled'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content: const Text(
+              'Fingerprint registration cancelled',
+              style: TextStyle(color: Colors.black),
+            ),
+            backgroundColor: AppColors.buttons,
           ),
         );
       }
@@ -230,9 +233,7 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
                 ),
               ),
               if (_selectedLocker != null)
-                IconButton(
-                  icon: const Icon(Icons.list_alt, color: AppColors.buttons),
-                  tooltip: 'View Logs',
+                ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -242,6 +243,20 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
                       ),
                     );
                   },
+                  icon: const Icon(Icons.history, size: 18),
+                  label: const Text(
+                    'View Logs',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttons,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 2,
+                  ),
                 ),
             ],
           ),

@@ -26,9 +26,9 @@ class _RecordScreenState extends State<RecordScreen> {
   
   final List<String> _filterOptions = [
     'All Records',
+    'Today',
     'Last 7 days',
     'Last 30 days',
-    'This month',
   ];
 
   String? _selectedFilter;
@@ -103,6 +103,10 @@ class _RecordScreenState extends State<RecordScreen> {
     final now = DateTime.now();
 
     switch (value) {
+      case 'Today':
+        dateFrom = DateTime(now.year, now.month, now.day);
+        dateTo = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
       case 'Last 7 days':
         dateFrom = now.subtract(const Duration(days: 7));
         dateTo = now;
@@ -110,10 +114,6 @@ class _RecordScreenState extends State<RecordScreen> {
       case 'Last 30 days':
         dateFrom = now.subtract(const Duration(days: 30));
         dateTo = now;
-        break;
-      case 'This month':
-        dateFrom = DateTime(now.year, now.month, 1);
-        dateTo = DateTime(now.year, now.month + 1, 0);
         break;
       default:
         dateFrom = null;
@@ -135,9 +135,14 @@ class _RecordScreenState extends State<RecordScreen> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error, color: Colors.white, size: 20),
+            const Icon(Icons.error, color: Colors.black, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message)),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.black), 
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.red,
@@ -146,7 +151,7 @@ class _RecordScreenState extends State<RecordScreen> {
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Retry',
-          textColor: Colors.white,
+          textColor: Colors.black,
           onPressed: () {
             _provider.clearError();
             _loadAuditLogs();

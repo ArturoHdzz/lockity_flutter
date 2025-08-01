@@ -88,7 +88,7 @@ class LockerCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFA726),
+                        color: AppColors.buttons, 
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                       child: const Icon(
