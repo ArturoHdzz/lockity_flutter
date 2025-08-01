@@ -82,11 +82,13 @@ class LockerProvider extends ChangeNotifier {
     try {
       final topic = _lockerConfig?.topics['toggle'];
       if (topic == null) throw Exception('No topic for toggle');
+      
       await _controlLockerUseCase.openCompartment(
         lockerId: _selectedLocker!.id,
         compartmentId: _selectedCompartment!.id,
         topic: topic, 
       );
+      
       final updatedCompartments = _compartments.map((comp) {
         if (comp.id == _selectedCompartment!.id) {
           return Compartment(
@@ -103,6 +105,7 @@ class LockerProvider extends ChangeNotifier {
       _selectedCompartment = updatedCompartments.firstWhere(
         (comp) => comp.id == _selectedCompartment!.id,
       );
+      
       _setState(LockerState.loaded);
       return true;
     } catch (e) {

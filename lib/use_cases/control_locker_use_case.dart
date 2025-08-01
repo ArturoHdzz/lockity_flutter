@@ -43,16 +43,10 @@ class ControlLockerUseCase {
         );
       }
 
-      final serialNumber = topic.split('/').first;
-      final updateRequest = UpdateLockerStatusRequest(
-        lockerId: lockerId,
-        serialNumber: serialNumber,
-        compartmentNumber: compartmentId,
-        status: LockerStatus.open,
+      return const LockerOperationResponse(
+        success: true,
+        message: 'Compartment opened successfully',
       );
-
-      final response = await _lockerRepository.updateLockerStatus(updateRequest);
-      return response;
 
     } catch (e) {
       throw Exception(e.toString());
