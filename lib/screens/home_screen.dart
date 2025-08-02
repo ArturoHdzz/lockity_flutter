@@ -231,25 +231,90 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  EdgeInsets _getResponsivePadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    double horizontalPadding;
+    if (screenWidth < 360) {
+      horizontalPadding = 16.0;
+    } else if (screenWidth < 400) {
+      horizontalPadding = 24.0;
+    } else if (screenWidth < 600) {
+      horizontalPadding = 32.0;
+    } else {
+      horizontalPadding = 40.0;
+    }
+    
+    double verticalPadding;
+    if (screenHeight < 600) {
+      verticalPadding = 12.0;
+    } else if (screenHeight < 700) {
+      verticalPadding = 16.0;
+    } else {
+      verticalPadding = 20.0;
+    }
+    
+    return EdgeInsets.symmetric(
+      horizontal: horizontalPadding,
+      vertical: verticalPadding,
+    );
+  }
+
+  double _getResponsiveSpacing(BuildContext context, double baseSpacing) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    if (screenHeight < 600) {
+      return baseSpacing * 0.6;
+    } else if (screenHeight < 700) {
+      return baseSpacing * 0.8;
+    } else {
+      return baseSpacing;
+    }
+  }
+
+  double _getResponsiveButtonSize(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    if (screenWidth < 360 || screenHeight < 600) {
+      return 140.0; 
+    } else if (screenWidth < 400 || screenHeight < 700) {
+      return 160.0; 
+    } else {
+      return 180.0; 
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 20),
-          _buildLockerDropdown(),
-          const SizedBox(height: 20),
-          _buildCompartmentDropdown(),
-          const SizedBox(height: 40), 
-          const Spacer(),
-          _buildActionButtons(),
-          const SizedBox(height: 20),
-          _buildOpenButton(), 
-          const Spacer(),
-        ],
+    final responsivePadding = _getResponsivePadding(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    return SafeArea(
+      child: Padding(
+        padding: responsivePadding,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(height: _getResponsiveSpacing(context, 20)),
+            _buildLockerDropdown(),
+            SizedBox(height: _getResponsiveSpacing(context, 20)),
+            _buildCompartmentDropdown(),
+            SizedBox(height: _getResponsiveSpacing(context, 40)),
+            
+            if (screenHeight > 600) const Spacer(flex: 1),
+            if (screenHeight <= 600) SizedBox(height: _getResponsiveSpacing(context, 20)),
+            
+            _buildActionButtons(),
+            SizedBox(height: _getResponsiveSpacing(context, 20)),
+            _buildOpenButton(),
+            
+            if (screenHeight > 600) const Spacer(flex: 1),
+            if (screenHeight <= 600) SizedBox(height: _getResponsiveSpacing(context, 16)),
+          ],
+        ),
       ),
     );
   }
@@ -320,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         if (_provider.compartmentStatus != null) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: _getResponsiveSpacing(context, 8)),
           _buildStatusIndicator(),
         ],
       ],
@@ -330,9 +395,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStatusIndicator() {
     final status = _provider.compartmentStatus!;
     final isOpen = status.isOpen;
+    final screenWidth = MediaQuery.of(context).size.width;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 360 ? 8 : 12, 
+        vertical: 6
+      ),
       decoration: BoxDecoration(
         color: isOpen ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
@@ -346,23 +415,27 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(
             isOpen ? Icons.lock_open : Icons.lock,
-            size: 16,
+            size: screenWidth < 360 ? 14 : 16,
             color: isOpen ? Colors.amber.shade700 : Colors.grey.shade600,
           ),
-          const SizedBox(width: 6),
-          Text(
-            'Status: ${status.message.toUpperCase()}',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: isOpen ? Colors.amber.shade700 : Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
+          SizedBox(width: screenWidth < 360 ? 4 : 6),
+          Flexible(
+            child: Text(
+              'Status: ${status.message.toUpperCase()}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: isOpen ? Colors.amber.shade700 : Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+                fontSize: screenWidth < 360 ? 11 : null,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: screenWidth < 360 ? 6 : 8),
           GestureDetector(
             onTap: _handleRefreshStatus,
             child: Icon(
               Icons.refresh,
-              size: 16,
+              size: screenWidth < 360 ? 14 : 16,
               color: Colors.blue.shade600,
             ),
           ),
@@ -372,8 +445,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLoadingDropdown(String text) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 360 ? 12 : 16, 
+        vertical: 12
+      ),
       decoration: BoxDecoration(
         color: AppColors.secondary.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
@@ -381,19 +460,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
+          SizedBox(
+            width: screenWidth < 360 ? 14 : 16,
+            height: screenWidth < 360 ? 14 : 16,
             child: CircularProgressIndicator(
               strokeWidth: 2,
               color: AppColors.buttons,
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            text,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.text.withOpacity(0.7),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.text.withOpacity(0.7),
+                fontSize: screenWidth < 360 ? 13 : null,
+              ),
             ),
           ),
         ],
@@ -402,50 +484,104 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildErrorDropdown(String text) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 360 ? 12 : 16, 
+        vertical: 12
+      ),
       decoration: BoxDecoration(
         color: Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.red.withOpacity(0.3)),
       ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 16,
-            color: Colors.red.shade600,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTextStyles.bodyMedium.copyWith(
+      child: screenWidth < 400 
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Colors.red.shade600,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: Colors.red.shade600,
+                        fontSize: screenWidth < 360 ? 13 : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    _provider.clearError();
+                    _provider.loadLockers();
+                  },
+                  child: Text(
+                    'Retry',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 16,
                 color: Colors.red.shade600,
               ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              _provider.clearError();
-              _provider.loadLockers();
-            },
-            child: Text(
-              'Retry',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: Colors.red.shade600,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  text,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.red.shade600,
+                  ),
+                ),
               ),
-            ),
+              TextButton(
+                onPressed: () {
+                  _provider.clearError();
+                  _provider.loadLockers();
+                },
+                child: Text(
+                  'Retry',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   Widget _buildEmptyDropdown(String text) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 360 ? 12 : 16, 
+        vertical: 12
+      ),
       decoration: BoxDecoration(
         color: AppColors.secondary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -455,14 +591,17 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(
             Icons.info_outline,
-            size: 16,
+            size: screenWidth < 360 ? 14 : 16,
             color: AppColors.text.withOpacity(0.5),
           ),
           const SizedBox(width: 12),
-          Text(
-            text,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.text.withOpacity(0.7),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.text.withOpacity(0.7),
+                fontSize: screenWidth < 360 ? 13 : null,
+              ),
             ),
           ),
         ],
@@ -471,8 +610,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDisabledDropdown(String text) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth < 360 ? 12 : 16, 
+        vertical: 12
+      ),
       decoration: BoxDecoration(
         color: AppColors.background.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -482,6 +627,7 @@ class _HomeScreenState extends State<HomeScreen> {
         text,
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.text.withOpacity(0.5),
+          fontSize: screenWidth < 360 ? 13 : null,
         ),
       ),
     );
@@ -489,6 +635,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActionButtons() {
     if (_provider.selectedLocker == null) return const SizedBox.shrink();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonSize = screenWidth < 360 ? 14.0 : 16.0;
+    final iconSize = screenWidth < 360 ? 20.0 : 24.0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -498,12 +648,16 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Alarm',
           onPressed: _provider.isOperating ? null : _handleAlarm,
           color: Colors.red,
+          buttonSize: buttonSize,
+          iconSize: iconSize,
         ),
         _buildActionButton(
           icon: Icons.camera_alt,
           label: 'Photo',
           onPressed: _provider.isOperating ? null : _handleTakePicture,
           color: Colors.blue,
+          buttonSize: buttonSize,
+          iconSize: iconSize,
         ),
       ],
     );
@@ -514,6 +668,8 @@ class _HomeScreenState extends State<HomeScreen> {
     required String label,
     required VoidCallback? onPressed,
     required Color color,
+    required double buttonSize,
+    required double iconSize,
   }) {
     return Column(
       children: [
@@ -523,11 +679,11 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: onPressed != null ? color : Colors.grey,
             foregroundColor: Colors.white,
             shape: const CircleBorder(),
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(buttonSize),
           ),
-          child: Icon(icon, size: 24),
+          child: Icon(icon, size: iconSize),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: _getResponsiveSpacing(context, 8)),
         Text(
           label,
           style: AppTextStyles.bodySmall.copyWith(
@@ -547,6 +703,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final cooldownTime = _provider.cooldownFormattedTime;
     final cooldownProgress = _provider.cooldownProgress;
     
+    final buttonSize = _getResponsiveButtonSize(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     Color buttonColor;
     if (isInCooldown) {
       buttonColor = Colors.orange.shade400;
@@ -562,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     String buttonText;
     if (isInCooldown) {
-      buttonText = 'Wait $cooldownTime';
+      buttonText = screenWidth < 360 ? cooldownTime : 'Wait $cooldownTime';
     } else if (isRefreshing) {
       buttonText = 'Checking...';
     } else if (isOperating) {
@@ -582,11 +741,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             if (isInCooldown) ...[
               SizedBox(
-                width: 190,
-                height: 190,
+                width: buttonSize + 10,
+                height: buttonSize + 10,
                 child: CircularProgressIndicator(
                   value: 1 - cooldownProgress,
-                  strokeWidth: 5,
+                  strokeWidth: screenWidth < 360 ? 4 : 5,
                   backgroundColor: Colors.orange.shade100,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade300),
                 ),
@@ -597,8 +756,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: canOperate && !isOperating && !isRefreshing && !isInCooldown ? _handleToggleState : null,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: 180,
-                height: 180,
+                width: buttonSize,
+                height: buttonSize,
                 decoration: BoxDecoration(
                   color: buttonColor,
                   shape: BoxShape.circle,
@@ -617,26 +776,35 @@ class _HomeScreenState extends State<HomeScreen> {
                   isInCooldown: isInCooldown,
                   canOperate: canOperate,
                   cooldownTime: cooldownTime,
+                  buttonSize: buttonSize,
                 ),
               ),
             ),
           ],
         ),
         
-        const SizedBox(height: 16),
+        SizedBox(height: _getResponsiveSpacing(context, 16)),
         
-        Text(
-          buttonText,
-          style: AppTextStyles.headingSmall.copyWith(
-            color: canOperate && !isInCooldown ? AppColors.text : AppColors.text.withOpacity(0.5),
-            fontWeight: FontWeight.w600,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            buttonText,
+            style: AppTextStyles.headingSmall.copyWith(
+              color: canOperate && !isInCooldown ? AppColors.text : AppColors.text.withOpacity(0.5),
+              fontWeight: FontWeight.w600,
+              fontSize: screenWidth < 360 ? 16 : null,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
         
         if (isInCooldown) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: _getResponsiveSpacing(context, 8)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth < 360 ? 8 : 12, 
+              vertical: 6
+            ),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
@@ -647,15 +815,18 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Icon(
                   Icons.timer,
-                  size: 16,
+                  size: screenWidth < 360 ? 14 : 16,
                   color: Colors.orange.shade600,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Auto-update when ready',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.orange.shade600,
-                    fontWeight: FontWeight.w500,
+                SizedBox(width: screenWidth < 360 ? 4 : 6),
+                Flexible(
+                  child: Text(
+                    screenWidth < 360 ? 'Auto-update' : 'Auto-update when ready',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.orange.shade600,
+                      fontWeight: FontWeight.w500,
+                      fontSize: screenWidth < 360 ? 11 : null,
+                    ),
                   ),
                 ),
               ],
@@ -664,11 +835,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         
         if (_provider.compartmentStatus != null && !isInCooldown) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: _getResponsiveSpacing(context, 8)),
           TextButton.icon(
             onPressed: _handleRefreshStatus,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Refresh Status'),
+            icon: Icon(Icons.refresh, size: screenWidth < 360 ? 14 : 16),
+            label: Text(
+              screenWidth < 360 ? 'Refresh' : 'Refresh Status',
+              style: AppTextStyles.bodySmall.copyWith(
+                fontSize: screenWidth < 360 ? 12 : null,
+              ),
+            ),
             style: TextButton.styleFrom(
               foregroundColor: Colors.blue,
               textStyle: AppTextStyles.bodySmall,
@@ -685,12 +861,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool isInCooldown,
     required bool canOperate,
     required String cooldownTime,
+    required double buttonSize,
   }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     if (isOperating || isRefreshing) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
           color: Colors.white,
-          strokeWidth: 3,
+          strokeWidth: screenWidth < 360 ? 2 : 3,
         ),
       );
     }
@@ -702,15 +881,17 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             Icons.timer,
             color: Colors.white,
-            size: 60,
+            size: buttonSize * 0.35, 
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: buttonSize * 0.05),
           Text(
             cooldownTime,
             style: AppTextStyles.headingSmall.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+              fontSize: screenWidth < 360 ? 14 : null,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       );
@@ -719,7 +900,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Icon(
       Icons.power_settings_new,
       color: canOperate ? Colors.white : Colors.white.withOpacity(0.5),
-      size: 100,
+      size: buttonSize * 0.55, 
     );
   }
 }

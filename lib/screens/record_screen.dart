@@ -44,14 +44,6 @@ class _RecordScreenState extends State<RecordScreen> {
     _loadAuditLogs();
   }
 
-  // void _initializeProvider() {
-  //   final repository = AuditLogRepositoryImpl();
-  //   _provider = AuditLogProvider(
-  //     getAuditLogsUseCase: GetAuditLogsUseCase(repository),
-  //   );
-  //   _provider.addListener(_onProviderStateChanged);
-  // }
-
   void _initializeProvider() {
     final repository = AppConfig.useMockAuditLogs 
       ? AuditLogRepositoryMock()
@@ -161,6 +153,46 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
+  EdgeInsets _getResponsivePadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    double horizontalPadding;
+    if (screenWidth < 360) {
+      horizontalPadding = 16.0;
+    } else if (screenWidth < 400) {
+      horizontalPadding = 20.0;
+    } else {
+      horizontalPadding = 24.0;
+    }
+    
+    double verticalPadding;
+    if (screenHeight < 600) {
+      verticalPadding = 12.0;
+    } else if (screenHeight < 700) {
+      verticalPadding = 16.0;
+    } else {
+      verticalPadding = 20.0;
+    }
+    
+    return EdgeInsets.symmetric(
+      horizontal: horizontalPadding,
+      vertical: verticalPadding,
+    );
+  }
+
+  double _getResponsiveSpacing(BuildContext context, double baseSpacing) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    if (screenHeight < 600) {
+      return baseSpacing * 0.7;
+    } else if (screenHeight < 700) {
+      return baseSpacing * 0.85;
+    } else {
+      return baseSpacing;
+    }
+  }
+
   @override
   void dispose() {
     _provider.removeListener(_onProviderStateChanged);
@@ -171,49 +203,83 @@ class _RecordScreenState extends State<RecordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final responsivePadding = _getResponsivePadding(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
+        title: screenWidth < 360 ? Text(
+          'Logs',
+          style: AppTextStyles.headingSmall.copyWith(color: AppColors.text),
+        ) : null,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            _buildHeader(),
-            const SizedBox(height: 16), 
-            _buildFilterDropdown(),
-            const SizedBox(height: 16),
-            _buildContent(),
-          ],
+      body: SafeArea(
+        child: Padding(
+          padding: responsivePadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: _getResponsiveSpacing(context, 8)),
+              _buildHeader(),
+              SizedBox(height: _getResponsiveSpacing(context, 16)),
+              _buildFilterDropdown(),
+              SizedBox(height: _getResponsiveSpacing(context, 16)),
+              Expanded(child: _buildContent()),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Access Logs',
-          style: AppTextStyles.headingMedium.copyWith(
-            color: AppColors.text,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (_provider.total > 0)
-          Text(
-            '${_provider.total} records',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.text.withOpacity(0.7),
-            ),
-          ),
-      ],
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return screenWidth < 500
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Access Logs',
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: screenWidth < 360 ? 20 : null,
+                ),
+              ),
+              if (_provider.total > 0) ...[
+                SizedBox(height: _getResponsiveSpacing(context, 4)),
+                Text(
+                  '${_provider.total} records',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.text.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ],
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Access Logs',
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (_provider.total > 0)
+                Text(
+                  '${_provider.total} records',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.text.withOpacity(0.7),
+                  ),
+                ),
+            ],
+          );
   }
 
   Widget _buildFilterDropdown() {
@@ -226,18 +292,16 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Widget _buildContent() {
-    return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.secondary.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(
-            color: AppColors.text.withOpacity(0.2),
-            width: 1.0,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: AppColors.text.withOpacity(0.2),
+          width: 1.0,
         ),
-        child: _buildContentBody(),
       ),
+      child: _buildContentBody(),
     );
   }
 
@@ -278,44 +342,53 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Widget _buildEmptyState() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.assignment_outlined,
-            color: AppColors.text.withOpacity(0.5),
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No audit logs found',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.text.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _selectedFilter == 'All Records' 
-              ? 'No audit logs available'
-              : 'No records found for the selected time range',
-            style: AppTextStyles.bodySmall.copyWith(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.assignment_outlined,
               color: AppColors.text.withOpacity(0.5),
+              size: screenWidth < 360 ? 40 : 48,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'No audit logs found',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.text.withOpacity(0.7),
+                fontSize: screenWidth < 360 ? 14 : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _selectedFilter == 'All Records' 
+                ? 'No audit logs available'
+                : 'No records found for the selected time range',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.text.withOpacity(0.5),
+                fontSize: screenWidth < 360 ? 11 : null,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAuditLogsList() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       color: AppColors.buttons,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(screenWidth < 360 ? 12 : 16),
         itemCount: _provider.auditLogs.length + (_provider.hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index >= _provider.auditLogs.length) {
@@ -355,9 +428,10 @@ class _RecordScreenState extends State<RecordScreen> {
     final action = auditLog.action ?? '';
     final serial = locker?.serialNumber ?? '';
     final user = auditLog.performedBy.fullName;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: _getResponsiveSpacing(context, 12)),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(8),
@@ -367,153 +441,306 @@ class _RecordScreenState extends State<RecordScreen> {
         ),
       ),
       child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Row(
-          children: [
-            Container(
-              width: 80,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getActionColor(action),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                action.toUpperCase(),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                user,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.text,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  timestamp.split('T').first,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.text.withOpacity(0.7),
-                  ),
-                ),
-                if (timestamp.contains('T'))
-                  Text(
-                    timestamp.split('T')[1].substring(0, 5),
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.text.withOpacity(0.6),
-                    ),
-                  ),
-              ],
-            ),
-          ],
+        tilePadding: EdgeInsets.symmetric(
+          horizontal: screenWidth < 360 ? 12 : 16,
+          vertical: screenWidth < 360 ? 6 : 8,
         ),
-        children: [
-          const Divider(),
-          Text('Full Name: $user', style: AppTextStyles.bodySmall),
-          Text('Source: ${auditLog.source}', style: AppTextStyles.bodySmall),
-          Text('Compartment: ${locker?.manipulatedCompartment ?? "-"}', style: AppTextStyles.bodySmall),
-          Text('Serial: $serial', style: AppTextStyles.bodySmall),
-          Text('Organization: ${locker?.organizationName ?? ""}', style: AppTextStyles.bodySmall),
-          Text('Area: ${locker?.areaName ?? ""}', style: AppTextStyles.bodySmall),
-          Text('Email: ${auditLog.performedBy.email}', style: AppTextStyles.bodySmall),
-          Text('Date: $timestamp', style: AppTextStyles.bodySmall),
-          if (photoPath != null && photoPath.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.image),
-                label: const Text('See image'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.buttons,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                onPressed: () async {
-                  final signedUrl = await _getSupabaseSignedUrl(photoPath);
-                  if (signedUrl != null) {
-                    showGeneralDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      barrierLabel: 'Image',
-                      transitionDuration: const Duration(milliseconds: 250),
-                      pageBuilder: (context, anim1, anim2) {
-                        return GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            color: Colors.black.withOpacity(0.85),
-                            child: Center(
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                                    child: InteractiveViewer(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(18),
-                                        child: Image.network(
-                                          signedUrl,
-                                          fit: BoxFit.contain,
-                                          width: MediaQuery.of(context).size.width * 0.85,
-                                          height: MediaQuery.of(context).size.height * 0.6,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return SizedBox(
-                                              width: 120,
-                                              height: 120,
-                                              child: Center(child: CircularProgressIndicator()),
-                                            );
-                                          },
-                                          errorBuilder: (context, error, stackTrace) =>
-                                            const Icon(Icons.broken_image, color: Colors.white, size: 80),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 24,
-                                    right: 24,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                                      onPressed: () => Navigator.of(context).pop(),
-                                    ),
-                                  ),
-                                ],
-                              ),
+        childrenPadding: EdgeInsets.symmetric(
+          horizontal: screenWidth < 360 ? 12 : 16,
+          vertical: screenWidth < 360 ? 6 : 8,
+        ),
+        title: screenWidth < 500
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: screenWidth < 360 ? 70 : 80,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth < 360 ? 6 : 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getActionColor(action),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          action.toUpperCase(),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: screenWidth < 360 ? 9 : 10,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Spacer(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            timestamp.split('T').first,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.text.withOpacity(0.7),
+                              fontSize: screenWidth < 360 ? 11 : null,
                             ),
                           ),
-                        );
-                      },
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Image not available')),
-                    );
-                  }
-                },
+                          if (timestamp.contains('T'))
+                            Text(
+                              timestamp.split('T')[1].substring(0, 5),
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.text.withOpacity(0.6),
+                                fontSize: screenWidth < 360 ? 10 : null,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    user,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w500,
+                      fontSize: screenWidth < 360 ? 13 : null,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Container(
+                    width: 80,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getActionColor(action),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      action.toUpperCase(),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      user,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        timestamp.split('T').first,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.text.withOpacity(0.7),
+                        ),
+                      ),
+                      if (timestamp.contains('T'))
+                        Text(
+                          timestamp.split('T')[1].substring(0, 5),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.text.withOpacity(0.6),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-          const SizedBox(height: 8),
-          _buildCardDescription(auditLog),
-          if (locker != null) ...[
-            const SizedBox(height: 8),
-            _buildCardLocation(locker),
-          ],
+        children: [
+          const Divider(),
+          _buildExpandedContent(auditLog, screenWidth),
         ],
       ),
     );
+  }
+
+  Widget _buildExpandedContent(AuditLog auditLog, double screenWidth) {
+    final locker = auditLog.locker;
+    final photoPath = auditLog.photoPath;
+    final timestamp = auditLog.timestamp ?? '';
+    final serial = locker?.serialNumber ?? '';
+    final user = auditLog.performedBy.fullName;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDetailRow('Full Name:', user, screenWidth),
+        _buildDetailRow('Source:', auditLog.source ?? "", screenWidth),
+        _buildDetailRow('Compartment:', (locker?.manipulatedCompartment ?? "-").toString(), screenWidth),
+        _buildDetailRow('Serial:', serial, screenWidth),
+        _buildDetailRow('Organization:', locker?.organizationName ?? "", screenWidth),
+        _buildDetailRow('Area:', locker?.areaName ?? "", screenWidth),
+        _buildDetailRow('Email:', auditLog.performedBy.email, screenWidth),
+        _buildDetailRow('Date:', timestamp, screenWidth),
+        
+        if (photoPath != null && photoPath.isNotEmpty) ...[
+          SizedBox(height: _getResponsiveSpacing(context, 8)),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: Icon(Icons.image, size: screenWidth < 360 ? 16 : 18),
+              label: Text(
+                'See image',
+                style: TextStyle(fontSize: screenWidth < 360 ? 12 : 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.buttons,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth < 360 ? 8 : 12,
+                  vertical: screenWidth < 360 ? 6 : 8,
+                ),
+              ),
+              onPressed: () => _showImageDialog(photoPath),
+            ),
+          ),
+        ],
+        
+        SizedBox(height: _getResponsiveSpacing(context, 8)),
+        _buildCardDescription(auditLog, screenWidth),
+        
+        if (locker != null) ...[
+          SizedBox(height: _getResponsiveSpacing(context, 8)),
+          _buildCardLocation(locker, screenWidth),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, double screenWidth) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: _getResponsiveSpacing(context, 4)),
+      child: screenWidth < 400
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: screenWidth < 360 ? 11 : null,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontSize: screenWidth < 360 ? 11 : null,
+                  ),
+                ),
+              ],
+            )
+          : RichText(
+              text: TextSpan(
+                text: '$label ',
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.text,
+                ),
+                children: [
+                  TextSpan(
+                    text: value,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.normal,
+                      color: AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Future<void> _showImageDialog(String photoPath) async {
+    final signedUrl = await _getSupabaseSignedUrl(photoPath);
+    if (signedUrl != null && mounted) {
+      final screenSize = MediaQuery.of(context).size;
+      
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Image',
+        transitionDuration: const Duration(milliseconds: 250),
+        pageBuilder: (context, anim1, anim2) {
+          return GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              color: Colors.black.withOpacity(0.85),
+              child: SafeArea(
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenSize.width < 360 ? 12 : 16,
+                          vertical: screenSize.width < 360 ? 24 : 32,
+                        ),
+                        child: InteractiveViewer(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.network(
+                              signedUrl,
+                              fit: BoxFit.contain,
+                              width: screenSize.width * (screenSize.width < 360 ? 0.9 : 0.85),
+                              height: screenSize.height * (screenSize.width < 360 ? 0.7 : 0.6),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return SizedBox(
+                                  width: screenSize.width < 360 ? 100 : 120,
+                                  height: screenSize.width < 360 ? 100 : 120,
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) => Icon(
+                                Icons.broken_image,
+                                color: Colors.white,
+                                size: screenSize.width < 360 ? 60 : 80,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: screenSize.width < 360 ? 16 : 24,
+                      right: screenSize.width < 360 ? 16 : 24,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: screenSize.width < 360 ? 28 : 32,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image not available')),
+      );
+    }
   }
 
   Future<String?> _getSupabaseSignedUrl(String photoPath) async {
@@ -528,36 +755,38 @@ class _RecordScreenState extends State<RecordScreen> {
     }
   }
 
-  Widget _buildCardDescription(AuditLog auditLog) {
+  Widget _buildCardDescription(AuditLog auditLog, double screenWidth) {
     return Text(
       auditLog.description,
       style: AppTextStyles.bodyMedium.copyWith(
         color: AppColors.text.withOpacity(0.9),
         height: 1.4,
+        fontSize: screenWidth < 360 ? 13 : null,
       ),
     );
   }
 
-  Widget _buildCardLocation(LockerInfo locker) {
+  Widget _buildCardLocation(LockerInfo locker, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(screenWidth < 360 ? 6 : 8),
       decoration: BoxDecoration(
         color: AppColors.secondary.withOpacity(0.3),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.location_on_outlined,
             color: AppColors.buttons,
-            size: 16,
+            size: screenWidth < 360 ? 14 : 16,
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: screenWidth < 360 ? 3 : 4),
           Expanded(
             child: Text(
               '${locker.displayName} - ${locker.fullLocation}',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.text.withOpacity(0.8),
+                fontSize: screenWidth < 360 ? 11 : null,
               ),
             ),
           ),

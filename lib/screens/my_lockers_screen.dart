@@ -176,10 +176,13 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
             color: Colors.red.shade400,
           ),
           const SizedBox(height: 16),
-          Text(
-            _errorMessage ?? 'Unknown error',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage ?? 'Unknown error',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -214,111 +217,193 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
     );
   }
 
+  EdgeInsets _getResponsivePadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    double horizontalPadding;
+    if (screenWidth < 360) {
+      horizontalPadding = 16.0;
+    } else if (screenWidth < 400) {
+      horizontalPadding = 20.0; 
+    } else if (screenWidth < 600) {
+      horizontalPadding = 24.0; 
+    } else {
+      horizontalPadding = 32.0; 
+    }
+    
+    double verticalPadding;
+    if (screenHeight < 600) {
+      verticalPadding = 12.0; 
+    } else if (screenHeight < 700) {
+      verticalPadding = 16.0; 
+    } else {
+      verticalPadding = 20.0; 
+    }
+    
+    return EdgeInsets.symmetric(
+      horizontal: horizontalPadding,
+      vertical: verticalPadding,
+    );
+  }
+
+  double _getResponsiveSpacing(BuildContext context, double baseSpacing) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    if (screenHeight < 600) {
+      return baseSpacing * 0.7; 
+    } else if (screenHeight < 700) {
+      return baseSpacing * 0.85;
+    } else {
+      return baseSpacing;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'My Lockers',
-                style: AppTextStyles.headingMedium.copyWith(
-                  color: AppColors.text,
-                  fontWeight: FontWeight.w600,
+    final responsivePadding = _getResponsivePadding(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return SafeArea(
+      child: Padding(
+        padding: responsivePadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: _getResponsiveSpacing(context, 20)),
+            
+            Flex(
+              direction: screenWidth < 500 ? Axis.vertical : Axis.horizontal,
+              mainAxisAlignment: screenWidth < 500 
+                  ? MainAxisAlignment.start 
+                  : MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: screenWidth < 500 
+                  ? CrossAxisAlignment.start 
+                  : CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'My Lockers',
+                  style: AppTextStyles.headingMedium.copyWith(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              if (_selectedLocker != null)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => RecordScreen(
-                          lockerSerialNumber: _selectedLocker!.serialNumber,
+                if (screenWidth < 500) SizedBox(height: _getResponsiveSpacing(context, 12)),
+                if (_selectedLocker != null)
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RecordScreen(
+                            lockerSerialNumber: _selectedLocker!.serialNumber,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.history, size: 18),
+                    label: Text(
+                      screenWidth < 360 ? 'Logs' : 'View Logs',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.buttons,
+                      foregroundColor: Colors.black,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth < 360 ? 12 : 16, 
+                        vertical: 8
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
+              ],
+            ),
+            
+            SizedBox(height: _getResponsiveSpacing(context, 24)),
+            
+            if (_loadingLockers)
+              const Center(child: CircularProgressIndicator())
+            else if (_errorMessage != null)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(_getResponsiveSpacing(context, 16)),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.error, color: Colors.red.shade400),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (screenWidth < 400) ...[
+                      SizedBox(height: _getResponsiveSpacing(context, 12)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: _fetchLockers,
+                          child: const Text('Retry'),
                         ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.history, size: 18),
-                  label: const Text(
-                    'View Logs',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.buttons,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 2,
-                  ),
+                    ] else
+                      Row(
+                        children: [
+                          const Spacer(),
+                          TextButton(
+                            onPressed: _fetchLockers,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          
-          if (_loadingLockers)
-            const Center(child: CircularProgressIndicator())
-          else if (_errorMessage != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
+              )
+            else if (_lockers.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(_getResponsiveSpacing(context, 16)),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.grey),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('No lockers available')),
+                  ],
+                ),
+              )
+            else
+              CustomDropdown(
+                value: _selectedLocker?.serialNumber,
+                items: _lockers.map((l) => l.serialNumber).toList(),
+                hint: 'Select Locker',
+                onChanged: _handleLockerChange,
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.error, color: Colors.red.shade400),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _fetchLockers,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            )
-          else if (_lockers.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info, color: Colors.grey),
-                  SizedBox(width: 12),
-                  Text('No lockers available'),
-                ],
-              ),
-            )
-          else
-            CustomDropdown(
-              value: _selectedLocker?.serialNumber,
-              items: _lockers.map((l) => l.serialNumber).toList(),
-              hint: 'Select Locker',
-              onChanged: _handleLockerChange,
+            
+            SizedBox(height: _getResponsiveSpacing(context, 24)),
+            
+            Expanded(
+              child: _buildCompartmentsList(),
             ),
-          
-          const SizedBox(height: 24),
-          
-          Expanded(
-            child: _buildCompartmentsList(),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -353,11 +438,15 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
               color: Colors.grey,
             ),
             SizedBox(height: 16),
-            Text(
-              'No compartments assigned',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                'No compartments assigned',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -370,13 +459,13 @@ class _MyLockersScreenState extends State<MyLockersScreen> {
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: compartments.length,
+        padding: EdgeInsets.only(bottom: _getResponsiveSpacing(context, 16)),
         itemBuilder: (context, index) {
           final comp = compartments[index];
-          
           final userId = comp.userId.toString();
           
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: _getResponsiveSpacing(context, 12)),
             child: LockerCard(
               lockerNumber: 'Compartment #${comp.compartmentNumber}',
               organization: _selectedLocker?.organizationName ?? '',
