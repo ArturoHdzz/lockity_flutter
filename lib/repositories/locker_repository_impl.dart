@@ -4,6 +4,7 @@ import 'package:lockity_flutter/core/app_config.dart';
 import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/models/locker_response.dart';
+import 'package:lockity_flutter/models/compartment_status_response.dart';
 import 'package:lockity_flutter/repositories/locker_repository.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 
@@ -74,6 +75,35 @@ class LockerRepositoryImpl implements LockerRepository {
     return LockerConfigResponse.fromJson(json.decode(response.body));
   }
 
+  @override
+  Future<CompartmentStatusResponse> getCompartmentStatus(
+    String serialNumber, 
+    int compartmentNumber
+  ) async {
+    final token = await OAuthService.getStoredToken();
+    if (token == null) {
+      throw const LockerRepositoryException._session('Authentication required');
+    }
+
+    final baseStatusUrl = AppConfig.lockerStatusEndpoint;
+    final url = '$baseStatusUrl/$serialNumber/$compartmentNumber';
+    
+    print('🔍 Consultando estado del compartimento: $url');
+    
+    final response = await _httpClient.get(
+      Uri.parse(url),
+      headers: {
+        ...token.authHeaders,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ).timeout(Duration(seconds: AppConfig.httpTimeout));
+
+    print('📡 Respuesta del estado: ${response.statusCode} - ${response.body}');
+
+    return _handleCompartmentStatusResponse(response);
+  }
+
   LockerListResponse _handleLockerListResponse(http.Response response) {
     switch (response.statusCode) {
       case 401:
@@ -128,6 +158,37 @@ class LockerRepositoryImpl implements LockerRepository {
     }
   }
 
+  CompartmentStatusResponse _handleCompartmentStatusResponse(http.Response response) {
+    switch (response.statusCode) {
+      case 401:
+        throw const LockerRepositoryException._session(
+          'Your session has expired. Please sign in again.'
+        );
+      case 403:
+        throw const LockerRepositoryException._permission(
+          'You don\'t have permission to access this compartment.'
+        );
+      case 404:
+        throw const LockerRepositoryException._notFound(
+          'Compartment not found or you don\'t have access to it.'
+        );
+      case 400:
+        throw const LockerRepositoryException._validation(
+          'Invalid serial number or compartment number provided.'
+        );
+      case 500:
+        throw const LockerRepositoryException._server(
+          'Server error occurred. Please try again later.'
+        );
+      case 200:
+        return _parseCompartmentStatusResponse(response);
+      default:
+        throw LockerRepositoryException._server(
+          'Unable to get compartment status. Please try again later.'
+        );
+    }
+  }
+
   LockerListResponse _parseLockerListResponse(http.Response response) {
     final responseData = _decodeResponse(response);
     if (responseData['success'] != true) {
@@ -141,6 +202,11 @@ class LockerRepositoryImpl implements LockerRepository {
   LockerOperationResponse _parseOperationResponse(http.Response response) {
     final responseData = _decodeResponse(response);
     return LockerOperationResponse.fromJson(responseData);
+  }
+
+  CompartmentStatusResponse _parseCompartmentStatusResponse(http.Response response) {
+    final responseData = _decodeResponse(response);
+    return CompartmentStatusResponse.fromJson(responseData);
   }
 
   Map<String, dynamic> _decodeResponse(http.Response response) {

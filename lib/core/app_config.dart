@@ -25,6 +25,7 @@ class AppConfig {
   static String get auditLogsUrl => dotenv.env['AUDIT_LOGS_ENDPOINT'] ?? 'http://64.23.237.187:8002/api/access-logs';
   static String get lockersUrl => dotenv.env['LOCKERS_ENDPOINT'] ?? '$baseUrl/api/lockers';
   static String get lockerConfigEndpoint => dotenv.env['LOCKER_CONFIG_ENDPOINT'] ?? '$baseUrl/api/locker-config';
+  static String get lockerStatusEndpoint => dotenv.env['LOCKER_STATUS_ENDPOINT'] ?? '$baseUrl/api/lockers/compartment/status';
 
   static String get oauthScope => dotenv.env['OAUTH_SCOPE'] ?? '';
   static String get oauthPrompt => dotenv.env['OAUTH_PROMPT'] ?? '';

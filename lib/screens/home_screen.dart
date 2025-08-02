@@ -112,6 +112,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleToggleState() async {
+    if (!_provider.canOperate || _provider.selectedLocker == null || _provider.selectedCompartment == null) {
+      _showErrorSnackBar('Please select a locker and compartment first');
+      return;
+    }
+
+    final status = await _provider.fetchCompartmentStatus();
+    if (status == null) {
+      _showErrorSnackBar('Failed to get compartment status');
+      return;
+    }
+
+    final success = await _provider.toggleSelectedCompartment();
+
+    if (success) {
+      final action = status.isClosed ? 'Opening' : 'Closing';
+      _showSuccessSnackBar('$action compartment...');
+    } else if (_provider.errorMessage != null) {
+      _showErrorSnackBar(_provider.errorMessage!);
+    }
+  }
+
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -408,32 +430,32 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildOpenButton() {
     final canOperate = _provider.canOperate;
     final isOperating = _provider.isOperating;
-    final compartmentStatus = _provider.selectedCompartment?.status.toLowerCase();
+    final compartmentStatus = _provider.compartmentStatus;
     
     Color buttonColor;
     if (!canOperate || isOperating) {
       buttonColor = Colors.grey;
-    } else if (compartmentStatus == 'open') {
-      buttonColor = Colors.amber; 
+    } else if (compartmentStatus?.isOpen == true) {
+      buttonColor = Colors.amber;
     } else {
-      buttonColor = Colors.grey.shade600; 
+      buttonColor = Colors.grey.shade600;
     }
     
     String buttonText;
     if (isOperating) {
       buttonText = 'Operating...';
-    } else if (compartmentStatus == 'open') {
+    } else if (compartmentStatus?.isOpen == true) {
       buttonText = 'Open';
-    } else if (compartmentStatus == 'closed') {
-      buttonText = 'Close';
+    } else if (compartmentStatus?.isClosed == true) {
+      buttonText = 'Closed';
     } else {
-      buttonText = 'Open';
+      buttonText = 'Status';
     }
 
     return Column(
       children: [
         GestureDetector(
-          onTap: canOperate && !isOperating ? _handleOpen : null,
+          onTap: canOperate && !isOperating ? _handleToggleState : null,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 180,

@@ -1,6 +1,7 @@
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/models/locker_response.dart';
 import 'package:lockity_flutter/models/locker_config_response.dart';
+import 'package:lockity_flutter/models/compartment_status_response.dart';
 import 'package:lockity_flutter/repositories/locker_repository.dart';
 
 class LockerRepositoryMock implements LockerRepository {
@@ -35,6 +36,8 @@ class LockerRepositoryMock implements LockerRepository {
       "status": "maintenance"
     },
   ];
+
+  static final Map<String, String> _compartmentStates = {};
 
   @override
   Future<LockerListResponse> getLockers(LockerListRequest request) async {
@@ -79,5 +82,29 @@ class LockerRepositoryMock implements LockerRepository {
         'picture': 'mock/picture',
       },
     );
+  }
+
+  @override
+  Future<CompartmentStatusResponse> getCompartmentStatus(
+    String serialNumber, 
+    int compartmentNumber
+  ) async {
+    await Future.delayed(_networkDelay);
+
+    final key = '$serialNumber-$compartmentNumber';
+    final currentState = _compartmentStates[key] ?? 'closed';
+    
+    final newState = currentState == 'closed' ? 'open' : 'closed';
+    _compartmentStates[key] = newState;
+
+    final mockResponse = {
+      "success": true,
+      "message": currentState,
+      "data": null
+    };
+
+    print('Mock compartment status: $serialNumber/$compartmentNumber -> $currentState');
+    
+    return CompartmentStatusResponse.fromJson(mockResponse);
   }
 }

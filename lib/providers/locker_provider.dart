@@ -5,6 +5,7 @@ import 'package:lockity_flutter/models/locker_config_response.dart';
 import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
 import 'package:lockity_flutter/use_cases/control_locker_use_case.dart';
+import 'package:lockity_flutter/models/compartment_status_response.dart';
 
 enum LockerState { initial, loading, loaded, operating, error }
 
@@ -146,6 +147,64 @@ class LockerProvider extends ChangeNotifier {
       );
       _setState(LockerState.loaded);
       return true;
+    } catch (e) {
+      _setError(_extractUserFriendlyMessage(e.toString()));
+      return false;
+    }
+  }
+
+  CompartmentStatusResponse? _compartmentStatus;
+  
+  CompartmentStatusResponse? get compartmentStatus => _compartmentStatus;
+
+  Future<CompartmentStatusResponse?> fetchCompartmentStatus() async {
+    if (_selectedLocker == null || _selectedCompartment == null) {
+      return null;
+    }
+
+    try {
+      _setState(LockerState.loading);
+      _clearError();
+
+      final status = await _controlLockerUseCase.getCompartmentStatus(
+        serialNumber: _selectedLocker!.serialNumber,
+        compartmentNumber: _selectedCompartment!.compartmentNumber,
+      );
+
+      _compartmentStatus = status;
+      _setState(LockerState.loaded);
+      return status;
+
+    } catch (e) {
+      _setError(_extractUserFriendlyMessage(e.toString()));
+      return null;
+    }
+  }
+
+  Future<bool> toggleSelectedCompartment() async {
+    if (!canOperate || _selectedLocker == null || _selectedCompartment == null) {
+      return false;
+    }
+
+    _setState(LockerState.operating);
+    _clearError();
+
+    try {
+      final topic = _lockerConfig?.topics['toggle'];
+      if (topic == null) throw Exception('No topic for toggle');
+      
+      await _controlLockerUseCase.toggleCompartmentStatus(
+        lockerId: _selectedLocker!.id,
+        serialNumber: _selectedLocker!.serialNumber,
+        compartmentNumber: _selectedCompartment!.compartmentNumber,
+        topic: topic, 
+      );
+      
+      await fetchCompartmentStatus();
+      
+      _setState(LockerState.loaded);
+      return true;
+
     } catch (e) {
       _setError(_extractUserFriendlyMessage(e.toString()));
       return false;
