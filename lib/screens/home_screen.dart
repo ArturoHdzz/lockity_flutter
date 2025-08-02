@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (screenHeight > 600) const Spacer(flex: 1),
             if (screenHeight <= 600) SizedBox(height: _getResponsiveSpacing(context, 20)),
             
-            _buildActionButtons(),
+            // _buildActionButtons(),
             SizedBox(height: _getResponsiveSpacing(context, 20)),
             _buildOpenButton(),
             
@@ -372,23 +372,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final compartmentNames = compartments.map((compartment) => compartment.displayName).toList();
     final selectedValue = _provider.selectedCompartment?.displayName;
 
-    return Column(
-      children: [
-        CustomDropdown(
-          value: selectedValue,
-          items: compartmentNames,
-          hint: 'Select Compartment',
-          onChanged: (newValue) async {
-            if (newValue != null) {
-              await _onCompartmentSelected(newValue);
-            }
-          },
-        ),
-        if (_provider.compartmentStatus != null) ...[
-          SizedBox(height: _getResponsiveSpacing(context, 8)),
-          _buildStatusIndicator(),
-        ],
-      ],
+    return CustomDropdown(
+      value: selectedValue,
+      items: compartmentNames,
+      hint: 'Select Compartment',
+      onChanged: (newValue) async {
+        if (newValue != null) {
+          await _onCompartmentSelected(newValue);
+        }
+      },
     );
   }
 
@@ -830,24 +822,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-        
-        if (_provider.compartmentStatus != null && !isInCooldown) ...[
-          SizedBox(height: _getResponsiveSpacing(context, 8)),
-          TextButton.icon(
-            onPressed: _handleRefreshStatus,
-            icon: Icon(Icons.refresh, size: screenWidth < 360 ? 14 : 16),
-            label: Text(
-              screenWidth < 360 ? 'Refresh' : 'Refresh Status',
-              style: AppTextStyles.bodySmall.copyWith(
-                fontSize: screenWidth < 360 ? 12 : null,
-              ),
-            ),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.blue,
-              textStyle: AppTextStyles.bodySmall,
             ),
           ),
         ],
