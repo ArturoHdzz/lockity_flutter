@@ -169,53 +169,96 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.text, size: 48),
-          const SizedBox(height: 16),
-          Text('Failed to load profile', style: AppTextStyles.bodyLarge),
-          const SizedBox(height: 8),
-          Text(
-            _provider.errorMessage ?? 'Unknown error',
-            style: AppTextStyles.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _loadUserProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.buttons,
-              foregroundColor: AppColors.primary,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width * 0.1,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.text, size: 48),
+            const SizedBox(height: 16),
+            Text('Failed to load profile', style: AppTextStyles.bodyLarge),
+            const SizedBox(height: 8),
+            Text(
+              _provider.errorMessage ?? 'Unknown error',
+              style: AppTextStyles.bodySmall,
+              textAlign: TextAlign.center,
             ),
-            child: const Text('Retry'),
-          ),
-        ],
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadUserProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.buttons,
+                foregroundColor: AppColors.primary,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const SizedBox(height: 40),
-          _buildProfileIcon(),
-          const SizedBox(height: 24),
-          if (_provider.user != null) _buildUserInfo(),
-          const SizedBox(height: 40),
-          _buildForm(),
-          const SizedBox(height: 40),
-        ],
-      ),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    final horizontalPadding = screenWidth < 360 
+        ? 12.0 
+        : screenWidth < 400 
+            ? 16.0 
+            : screenWidth > 600 
+                ? 32.0 
+                : 20.0;
+    
+    final verticalSpacing = screenHeight < 700 ? 20.0 : 40.0;
+    final smallVerticalSpacing = screenHeight < 700 ? 12.0 : 24.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: 16,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - 32,
+            ),
+            child: Column(
+              children: [
+                SizedBox(height: verticalSpacing),
+                _buildProfileIcon(),
+                SizedBox(height: smallVerticalSpacing),
+                if (_provider.user != null) _buildUserInfo(),
+                SizedBox(height: verticalSpacing),
+                _buildForm(),
+                SizedBox(height: verticalSpacing),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildProfileIcon() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    final iconSize = screenWidth < 360 
+        ? 80.0 
+        : screenWidth < 400 
+            ? 90.0 
+            : screenWidth > 600 
+                ? 120.0 
+                : 100.0;
+    
+    final personIconSize = iconSize * 0.5;
+
     return Container(
-      width: 100,
-      height: 100,
+      width: iconSize,
+      height: iconSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.secondary.withOpacity(0.3),
@@ -224,59 +267,104 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           width: 2,
         ),
       ),
-      child: const Icon(Icons.person, size: 50, color: AppColors.secondary),
+      child: Icon(
+        Icons.person, 
+        size: personIconSize, 
+        color: AppColors.secondary,
+      ),
     );
   }
 
   Widget _buildUserInfo() {
     final user = _provider.user!;
-    return Column(
-      children: [
-        Text(
-          user.fullName,
-          style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          user.email,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.text.withOpacity(0.8),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (user.hasEmailVerified) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.verified, color: Colors.green, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                'Email verified',
-                style: AppTextStyles.bodySmall.copyWith(color: Colors.green),
-              ),
-            ],
-          ),
-        ],
-        if (user.roles != null && user.roles!.isNotEmpty) ...[
-          const SizedBox(height: 12),
+    final screenHeight = MediaQuery.of(context).size.height;
+    final smallSpacing = screenHeight < 700 ? 2.0 : 4.0;
+    final mediumSpacing = screenHeight < 700 ? 6.0 : 8.0;
+    final largeSpacing = screenHeight < 700 ? 8.0 : 12.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width * 0.05,
+      ),
+      child: Column(
+        children: [
           Text(
-            'Roles: ${user.roles!.map((role) => role.role).join(', ')}',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.text.withOpacity(0.7),
+            user.fullName,
+            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: smallSpacing),
+          Text(
+            user.email,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.text.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
+          if (user.hasEmailVerified) ...[
+            SizedBox(height: mediumSpacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.verified, color: Colors.green, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'Email verified',
+                  style: AppTextStyles.bodySmall.copyWith(color: Colors.green),
+                ),
+              ],
+            ),
+          ],
+          if (user.roles != null && user.roles!.isNotEmpty) ...[
+            SizedBox(height: largeSpacing),
+            Text(
+              'Roles: ${user.roles!.map((role) => role.role).join(', ')}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.text.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
   Widget _buildForm() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    final formPadding = screenWidth < 360 
+        ? 16.0 
+        : screenWidth < 400 
+            ? 20.0 
+            : screenWidth > 600 
+                ? 32.0 
+                : 24.0;
+    
+    final horizontalMargin = screenWidth < 360 
+        ? 8.0 
+        : screenWidth < 400 
+            ? 12.0 
+            : screenWidth > 600 
+                ? 24.0 
+                : 16.0;
+
+    final verticalSpacing = screenHeight < 700 ? 16.0 : 24.0;
+
     return Container(
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxWidth: screenWidth > 600 ? 500 : double.infinity,
+      ),
+      padding: EdgeInsets.all(formPadding),
+      margin: EdgeInsets.symmetric(horizontal: horizontalMargin),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
@@ -297,9 +385,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 color: AppColors.text,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: verticalSpacing),
             ..._buildFormFields(),
-            const SizedBox(height: 24),
+            SizedBox(height: verticalSpacing),
             _buildSaveButton(),
           ],
         ),
@@ -351,8 +439,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final fieldSpacing = screenHeight < 700 ? 12.0 : 16.0;
+    
+    final verticalPadding = screenHeight < 700 ? 12.0 : 16.0;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: fieldSpacing),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
@@ -368,7 +461,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           focusedBorder: _buildInputBorder(AppColors.buttons, 2),
           errorBorder: _buildInputBorder(Colors.red, 1),
           focusedErrorBorder: _buildInputBorder(Colors.red, 2),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16, 
+            vertical: verticalPadding,
+          ),
         ),
       ),
     );
