@@ -4,6 +4,7 @@ import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/models/locker_response.dart';
 import 'package:lockity_flutter/models/compartment_status_response.dart';
 import 'package:lockity_flutter/repositories/locker_repository.dart';
+import 'package:lockity_flutter/repositories/locker_repository_mock.dart';
 import 'package:lockity_flutter/services/mqtt_service.dart';
 import 'package:lockity_flutter/services/user_service.dart';
 
@@ -145,7 +146,6 @@ class ControlLockerUseCase {
       );
 
       print('🔍 Estado actual del compartimento: ${statusResponse.message}');
-      print('📡 Respuesta completa del endpoint: ${statusResponse}');
 
       final mqttValue = statusResponse.mqttValue;
       final action = statusResponse.isClosed ? 'opening' : 'closing';
@@ -170,6 +170,9 @@ class ControlLockerUseCase {
             value: mqttValue,
           );
         }
+      } else {
+        await Future.delayed(const Duration(seconds: 1));
+        LockerRepositoryMock.simulateToggle(serialNumber, compartmentNumber);
       }
 
       return LockerOperationResponse(

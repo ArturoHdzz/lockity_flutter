@@ -27,14 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _initializeProvider();
   }
 
-  @override
-  void dispose() {
-    _provider.removeListener(_onProviderStateChanged);
-    _provider.dispose();
-    _mqttManager.dispose();
-    super.dispose();
-  }
-
   void _initializeProvider() {
     final repository = AppConfig.useMockLockers
         ? LockerRepositoryMock()
@@ -49,18 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _provider.loadLockers();
-      if (_provider.lockers.isNotEmpty) {
-        final firstLocker = _provider.lockers.first;
-        try {
-          await _provider.selectLocker(firstLocker);
-          if (_provider.lockerConfig == null) {
-            _showErrorSnackBar('Failed to load locker configuration.');
-          }
-        } catch (e) {
-          _showErrorSnackBar('Failed to load locker configuration.');
-        }
-      }
     });
+  }
+
+  @override
+  void dispose() {
+    _provider.removeListener(_onProviderStateChanged);
+    _provider.dispose();
+    _mqttManager.dispose();
+    super.dispose();
   }
 
   void _onProviderStateChanged() {
@@ -112,18 +101,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _onLockerSelected(String newValue) async {
+    final selectedLocker = _provider.lockers.firstWhere(
+      (locker) => '${locker.displayName} - ${locker.areaName}' == newValue,
+    );
+    
+    await _provider.selectLocker(selectedLocker);
+
+    if (!AppConfig.useMockLockers) {
+      await _mqttManager.connect(
+        serialNumber: selectedLocker.serialNumber,
+      );
+    }
+  }
+
+  Future<void> _onCompartmentSelected(String newValue) async {
+    final compartments = _provider.selectedLocker?.compartments ?? [];
+    final selectedCompartment = compartments.firstWhere(
+      (comp) => comp.displayName == newValue,
+    );
+    
+    await _provider.selectCompartment(selectedCompartment);
+  }
+
   Future<void> _handleToggleState() async {
-    if (!_provider.canOperate || _provider.selectedLocker == null || _provider.selectedCompartment == null) {
+    if (!_provider.canOperate) {
       _showErrorSnackBar('Please select a locker and compartment first');
       return;
     }
 
-    final status = await _provider.fetchCompartmentStatus();
-    if (status == null) {
-      _showErrorSnackBar('Failed to get compartment status');
+    final hasStatus = await _provider.refreshCompartmentStatus();
+    if (!hasStatus) {
+      _showErrorSnackBar('Failed to get current compartment status');
       return;
     }
 
+    final status = _provider.compartmentStatus!;
     final success = await _provider.toggleSelectedCompartment();
 
     if (success) {
@@ -131,6 +144,21 @@ class _HomeScreenState extends State<HomeScreen> {
       _showSuccessSnackBar('$action compartment...');
     } else if (_provider.errorMessage != null) {
       _showErrorSnackBar(_provider.errorMessage!);
+    }
+  }
+
+  Future<void> _handleRefreshStatus() async {
+    if (_provider.selectedCompartment == null) {
+      _showErrorSnackBar('Please select a compartment first');
+      return;
+    }
+
+    final success = await _provider.refreshCompartmentStatus();
+    if (success) {
+      final status = _provider.compartmentStatus!.message;
+      _showSuccessSnackBar('Status updated: $status');
+    } else {
+      _showErrorSnackBar('Failed to refresh compartment status');
     }
   }
 
@@ -214,16 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
       hint: 'Select Locker',
       onChanged: (newValue) async {
         if (newValue != null) {
-          final selectedLocker = _provider.lockers.firstWhere(
-            (locker) => '${locker.displayName} - ${locker.areaName}' == newValue,
-          );
-          _provider.selectLocker(selectedLocker);
-
-          if (!AppConfig.useMockLockers) {
-            await _mqttManager.connect(
-              serialNumber: selectedLocker.serialNumber,
-            );
-          }
+          await _onLockerSelected(newValue);
         }
       },
     );
@@ -236,6 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildDisabledDropdown('Select a locker first');
     }
 
+    if (_provider.isRefreshingStatus) {
+      return _buildLoadingDropdown('Loading compartment status...');
+    }
+
     final compartments = locker.compartments;
 
     if (compartments.isEmpty) {
@@ -245,18 +268,67 @@ class _HomeScreenState extends State<HomeScreen> {
     final compartmentNames = compartments.map((compartment) => compartment.displayName).toList();
     final selectedValue = _provider.selectedCompartment?.displayName;
 
-    return CustomDropdown(
-      value: selectedValue,
-      items: compartmentNames,
-      hint: 'Select Compartment',
-      onChanged: (newValue) {
-        if (newValue != null) {
-          final selectedCompartment = compartments.firstWhere(
-            (comp) => comp.displayName == newValue,
-          );
-          _provider.selectCompartment(selectedCompartment);
-        }
-      },
+    return Column(
+      children: [
+        CustomDropdown(
+          value: selectedValue,
+          items: compartmentNames,
+          hint: 'Select Compartment',
+          onChanged: (newValue) async {
+            if (newValue != null) {
+              await _onCompartmentSelected(newValue);
+            }
+          },
+        ),
+        if (_provider.compartmentStatus != null) ...[
+          const SizedBox(height: 8),
+          _buildStatusIndicator(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatusIndicator() {
+    final status = _provider.compartmentStatus!;
+    final isOpen = status.isOpen;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isOpen ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isOpen ? Colors.amber : Colors.grey,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isOpen ? Icons.lock_open : Icons.lock,
+            size: 16,
+            color: isOpen ? Colors.amber.shade700 : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Status: ${status.message.toUpperCase()}',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: isOpen ? Colors.amber.shade700 : Colors.grey.shade600,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _handleRefreshStatus,
+            child: Icon(
+              Icons.refresh,
+              size: 16,
+              color: Colors.blue.shade600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -430,32 +502,37 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildOpenButton() {
     final canOperate = _provider.canOperate;
     final isOperating = _provider.isOperating;
+    final isRefreshing = _provider.isRefreshingStatus;
     final compartmentStatus = _provider.compartmentStatus;
     
     Color buttonColor;
-    if (!canOperate || isOperating) {
+    if (!canOperate || isOperating || isRefreshing) {
       buttonColor = Colors.grey;
     } else if (compartmentStatus?.isOpen == true) {
       buttonColor = Colors.amber;
-    } else {
+    } else if (compartmentStatus?.isClosed == true) {
       buttonColor = Colors.grey.shade600;
+    } else {
+      buttonColor = Colors.grey.shade400;
     }
     
     String buttonText;
-    if (isOperating) {
+    if (isRefreshing) {
+      buttonText = 'Checking...';
+    } else if (isOperating) {
       buttonText = 'Operating...';
     } else if (compartmentStatus?.isOpen == true) {
       buttonText = 'Open';
     } else if (compartmentStatus?.isClosed == true) {
       buttonText = 'Closed';
     } else {
-      buttonText = 'Status';
+      buttonText = 'Unknown';
     }
 
     return Column(
       children: [
         GestureDetector(
-          onTap: canOperate && !isOperating ? _handleToggleState : null,
+          onTap: canOperate && !isOperating && !isRefreshing ? _handleToggleState : null,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 180,
@@ -463,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               color: buttonColor,
               shape: BoxShape.circle,
-              boxShadow: canOperate && !isOperating ? [
+              boxShadow: canOperate && !isOperating && !isRefreshing ? [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.3),
                   spreadRadius: 2,
@@ -472,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ] : [],
             ),
-            child: isOperating 
+            child: (isOperating || isRefreshing)
               ? const Center(
                   child: CircularProgressIndicator(
                     color: Colors.white,
@@ -494,6 +571,18 @@ class _HomeScreenState extends State<HomeScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        if (_provider.compartmentStatus != null) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _handleRefreshStatus,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Refresh Status'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blue,
+              textStyle: AppTextStyles.bodySmall,
+            ),
+          ),
+        ],
       ],
     );
   }

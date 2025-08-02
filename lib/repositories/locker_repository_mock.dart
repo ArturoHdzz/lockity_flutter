@@ -6,6 +6,12 @@ import 'package:lockity_flutter/repositories/locker_repository.dart';
 
 class LockerRepositoryMock implements LockerRepository {
   static const Duration _networkDelay = Duration(milliseconds: 800);
+  
+  static final Map<String, String> _compartmentStates = {
+    'SN-2025-0745-AX93-PLQ7-1': 'closed',
+    'SN-2025-0745-AX93-PLQ7-2': 'open',
+    'SN-2025-0745-AX93-PLQ7-3': 'closed',
+  };
 
   static final List<Map<String, dynamic>> _mockLockers = [
     {
@@ -36,8 +42,6 @@ class LockerRepositoryMock implements LockerRepository {
       "status": "maintenance"
     },
   ];
-
-  static final Map<String, String> _compartmentStates = {};
 
   @override
   Future<LockerListResponse> getLockers(LockerListRequest request) async {
@@ -92,10 +96,8 @@ class LockerRepositoryMock implements LockerRepository {
     await Future.delayed(_networkDelay);
 
     final key = '$serialNumber-$compartmentNumber';
-    final currentState = _compartmentStates[key] ?? 'closed';
     
-    final newState = currentState == 'closed' ? 'open' : 'closed';
-    _compartmentStates[key] = newState;
+    final currentState = _compartmentStates[key] ?? 'closed';
 
     final mockResponse = {
       "success": true,
@@ -103,8 +105,17 @@ class LockerRepositoryMock implements LockerRepository {
       "data": null
     };
 
-    print('Mock compartment status: $serialNumber/$compartmentNumber -> $currentState');
+    print('Mock: Estado actual para $key: $currentState');
     
     return CompartmentStatusResponse.fromJson(mockResponse);
+  }
+
+  static void simulateToggle(String serialNumber, int compartmentNumber) {
+    final key = '$serialNumber-$compartmentNumber';
+    final currentState = _compartmentStates[key] ?? 'closed';
+    final newState = currentState == 'closed' ? 'open' : 'closed';
+    _compartmentStates[key] = newState;
+    
+    print('Mock: Estado cambiado para $key: $currentState -> $newState');
   }
 }
