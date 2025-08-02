@@ -6,18 +6,43 @@ import 'package:lockity_flutter/models/locker_request.dart';
 import 'package:lockity_flutter/use_cases/get_lockers_use_case.dart';
 import 'package:lockity_flutter/use_cases/control_locker_use_case.dart';
 import 'package:lockity_flutter/models/compartment_status_response.dart';
+import 'package:lockity_flutter/services/button_cooldown_service.dart';
 
 enum LockerState { initial, loading, loaded, operating, error }
 
 class LockerProvider extends ChangeNotifier {
   final GetLockersUseCase _getLockersUseCase;
   final ControlLockerUseCase _controlLockerUseCase;
+  final ButtonCooldownService _cooldownService;
 
   LockerProvider({
     required GetLockersUseCase getLockersUseCase,
     required ControlLockerUseCase controlLockerUseCase,
+    ButtonCooldownService? cooldownService,
   }) : _getLockersUseCase = getLockersUseCase,
-       _controlLockerUseCase = controlLockerUseCase;
+       _controlLockerUseCase = controlLockerUseCase,
+       _cooldownService = cooldownService ?? ButtonCooldownService() {
+    
+    _cooldownService.addListener(_onCooldownChanged);
+    _cooldownService.setOnCooldownFinishedCallback(_onCooldownFinished);
+    _initializeCooldownService();
+  }
+
+  Future<void> _initializeCooldownService() async {
+    await _cooldownService.initialize();
+  }
+
+  void _onCooldownChanged() {
+    notifyListeners();
+  }
+
+  Future<void> _onCooldownFinished() async {
+    if (_selectedLocker != null && _selectedCompartment != null) {
+      print('🔄 Cooldown terminado - Actualizando estado del compartimento...');
+      await _refreshCompartmentStatus();
+      print('✅ Estado actualizado automáticamente después del cooldown');
+    }
+  }
 
   LockerState _state = LockerState.initial;
   List<Locker> _lockers = [];
@@ -30,7 +55,6 @@ class LockerProvider extends ChangeNotifier {
   CompartmentStatusResponse? _compartmentStatus;
   bool _isRefreshingStatus = false;
 
-  // Getters
   LockerState get state => _state;
   List<Locker> get lockers => List.unmodifiable(_lockers);
   Locker? get selectedLocker => _selectedLocker;
@@ -41,13 +65,72 @@ class LockerProvider extends ChangeNotifier {
   CompartmentStatusResponse? get compartmentStatus => _compartmentStatus;
   bool get isRefreshingStatus => _isRefreshingStatus;
 
+  bool get isInCooldown => _cooldownService.isInCooldown;
+  int get cooldownRemainingSeconds => _cooldownService.remainingSeconds;
+  String get cooldownFormattedTime => _cooldownService.formattedTimeRemaining;
+  double get cooldownProgress => _cooldownService.progressPercentage;
+
   bool get isLoading => _state == LockerState.loading;
   bool get isOperating => _state == LockerState.operating;
   bool get hasError => _state == LockerState.error;
   bool get isEmpty => _lockers.isEmpty && _state == LockerState.loaded;
+  
   bool get canOperate => _selectedLocker?.canOperate == true && 
                         _selectedCompartment?.canOperate == true &&
-                        !isOperating && !_isRefreshingStatus;
+                        !isOperating && 
+                        !_isRefreshingStatus &&
+                        !isInCooldown;
+
+  Future<bool> toggleSelectedCompartment() async {
+    if (_selectedLocker?.canOperate != true || 
+        _selectedCompartment?.canOperate != true ||
+        isOperating || 
+        _isRefreshingStatus) {
+      return false;
+    }
+
+    if (isInCooldown) {
+      _setError('Please wait ${cooldownFormattedTime} before using this button again');
+      return false;
+    }
+
+    await _refreshCompartmentStatus();
+    
+    if (_compartmentStatus == null) {
+      _setError('Could not determine compartment status');
+      return false;
+    }
+
+    _setState(LockerState.operating);
+    _clearError();
+
+    try {
+      final topic = _lockerConfig?.topics['toggle'];
+      if (topic == null) throw Exception('No topic for toggle');
+      
+      await _controlLockerUseCase.toggleCompartmentStatus(
+        lockerId: _selectedLocker!.id,
+        serialNumber: _selectedLocker!.serialNumber,
+        compartmentNumber: _selectedCompartment!.compartmentNumber,
+        topic: topic, 
+      );
+      
+      await _cooldownService.startCooldown(
+        serialNumber: _selectedLocker!.serialNumber,
+        compartmentNumber: _selectedCompartment!.compartmentNumber,
+      );
+      
+      _setState(LockerState.loaded);
+      
+      await _refreshCompartmentStatus();
+      
+      return true;
+
+    } catch (e) {
+      _setError(_extractUserFriendlyMessage(e.toString()));
+      return false;
+    }
+  }
 
   Future<void> loadLockers() async {
     if (_state == LockerState.loading) return;
@@ -178,44 +261,6 @@ class LockerProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> toggleSelectedCompartment() async {
-    if (!canOperate || _selectedLocker == null || _selectedCompartment == null) {
-      return false;
-    }
-
-    await _refreshCompartmentStatus();
-    
-    if (_compartmentStatus == null) {
-      _setError('Could not determine compartment status');
-      return false;
-    }
-
-    _setState(LockerState.operating);
-    _clearError();
-
-    try {
-      final topic = _lockerConfig?.topics['toggle'];
-      if (topic == null) throw Exception('No topic for toggle');
-      
-      await _controlLockerUseCase.toggleCompartmentStatus(
-        lockerId: _selectedLocker!.id,
-        serialNumber: _selectedLocker!.serialNumber,
-        compartmentNumber: _selectedCompartment!.compartmentNumber,
-        topic: topic, 
-      );
-      
-      _setState(LockerState.loaded);
-      
-      await _refreshCompartmentStatus();
-      
-      return true;
-
-    } catch (e) {
-      _setError(_extractUserFriendlyMessage(e.toString()));
-      return false;
-    }
-  }
-
   Future<bool> activateAlarm() async {
     if (_selectedLocker == null || isOperating) return false;
     
@@ -298,6 +343,8 @@ class LockerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _cooldownService.removeListener(_onCooldownChanged);
+    _cooldownService.setOnCooldownFinishedCallback(null);
     _isDisposed = true;
     super.dispose();
   }

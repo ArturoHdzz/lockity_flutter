@@ -53,7 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onProviderStateChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      
+      if (_provider.compartmentStatus != null && 
+          !_provider.isInCooldown && 
+          !_provider.isRefreshingStatus &&
+          !_provider.isOperating) {
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final status = _provider.compartmentStatus!.message;
+          if (ScaffoldMessenger.of(context).mounted) {
+            _showInfoSnackBar('Status updated: $status');
+          }
+        });
+      }
+    }
   }
 
   Future<void> _handleOpen() async {
@@ -126,7 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleToggleState() async {
     if (!_provider.canOperate) {
-      _showErrorSnackBar('Please select a locker and compartment first');
+      if (_provider.isInCooldown) {
+        _showErrorSnackBar('Please wait ${_provider.cooldownFormattedTime} before using this button again');
+      } else {
+        _showErrorSnackBar('Please select a locker and compartment first');
+      }
       return;
     }
 
@@ -141,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (success) {
       final action = status.isClosed ? 'Opening' : 'Closing';
-      _showSuccessSnackBar('$action compartment...');
+      _showSuccessSnackBar('$action compartment... (Cooldown: 20s)');
     } else if (_provider.errorMessage != null) {
       _showErrorSnackBar(_provider.errorMessage!);
     }
@@ -188,6 +207,26 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           },
         ),
+      ),
+    );
+  }
+
+  void _showInfoSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.blue.shade600,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -504,9 +543,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final isOperating = _provider.isOperating;
     final isRefreshing = _provider.isRefreshingStatus;
     final compartmentStatus = _provider.compartmentStatus;
+    final isInCooldown = _provider.isInCooldown;
+    final cooldownTime = _provider.cooldownFormattedTime;
+    final cooldownProgress = _provider.cooldownProgress;
     
     Color buttonColor;
-    if (!canOperate || isOperating || isRefreshing) {
+    if (isInCooldown) {
+      buttonColor = Colors.orange.shade400;
+    } else if (!canOperate || isOperating || isRefreshing) {
       buttonColor = Colors.grey;
     } else if (compartmentStatus?.isOpen == true) {
       buttonColor = Colors.amber;
@@ -517,7 +561,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     String buttonText;
-    if (isRefreshing) {
+    if (isInCooldown) {
+      buttonText = 'Wait $cooldownTime';
+    } else if (isRefreshing) {
       buttonText = 'Checking...';
     } else if (isOperating) {
       buttonText = 'Operating...';
@@ -531,47 +577,93 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Column(
       children: [
-        GestureDetector(
-          onTap: canOperate && !isOperating && !isRefreshing ? _handleToggleState : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              color: buttonColor,
-              shape: BoxShape.circle,
-              boxShadow: canOperate && !isOperating && !isRefreshing ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isInCooldown) ...[
+              SizedBox(
+                width: 190,
+                height: 190,
+                child: CircularProgressIndicator(
+                  value: 1 - cooldownProgress,
+                  strokeWidth: 5,
+                  backgroundColor: Colors.orange.shade100,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade300),
                 ),
-              ] : [],
+              ),
+            ],
+            
+            GestureDetector(
+              onTap: canOperate && !isOperating && !isRefreshing && !isInCooldown ? _handleToggleState : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  color: buttonColor,
+                  shape: BoxShape.circle,
+                  boxShadow: canOperate && !isOperating && !isRefreshing && !isInCooldown ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ] : [],
+                ),
+                child: _buildButtonContent(
+                  isOperating: isOperating,
+                  isRefreshing: isRefreshing,
+                  isInCooldown: isInCooldown,
+                  canOperate: canOperate,
+                  cooldownTime: cooldownTime,
+                ),
+              ),
             ),
-            child: (isOperating || isRefreshing)
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                )
-              : Icon(
-                  Icons.power_settings_new,
-                  color: canOperate ? Colors.white : Colors.white.withOpacity(0.5),
-                  size: 100,
-                ),
-          ),
+          ],
         ),
+        
         const SizedBox(height: 16),
+        
         Text(
           buttonText,
           style: AppTextStyles.headingSmall.copyWith(
-            color: canOperate ? AppColors.text : AppColors.text.withOpacity(0.5),
+            color: canOperate && !isInCooldown ? AppColors.text : AppColors.text.withOpacity(0.5),
             fontWeight: FontWeight.w600,
           ),
         ),
-        if (_provider.compartmentStatus != null) ...[
+        
+        if (isInCooldown) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.timer,
+                  size: 16,
+                  color: Colors.orange.shade600,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Auto-update when ready',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Colors.orange.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        
+        if (_provider.compartmentStatus != null && !isInCooldown) ...[
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _handleRefreshStatus,
@@ -584,6 +676,50 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildButtonContent({
+    required bool isOperating,
+    required bool isRefreshing,
+    required bool isInCooldown,
+    required bool canOperate,
+    required String cooldownTime,
+  }) {
+    if (isOperating || isRefreshing) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 3,
+        ),
+      );
+    }
+    
+    if (isInCooldown) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.timer,
+            color: Colors.white,
+            size: 60,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            cooldownTime,
+            style: AppTextStyles.headingSmall.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      );
+    }
+    
+    return Icon(
+      Icons.power_settings_new,
+      color: canOperate ? Colors.white : Colors.white.withOpacity(0.5),
+      size: 100,
     );
   }
 }
