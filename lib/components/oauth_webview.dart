@@ -5,6 +5,7 @@ import 'package:lockity_flutter/screens/loading_screen.dart';
 import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/core/app_colors.dart';
 import 'package:lockity_flutter/core/app_config.dart';
+import 'dart:io';
 
 class OAuthWebView extends StatefulWidget {
   final String authUrl;
@@ -43,10 +44,16 @@ class _OAuthWebViewState extends State<OAuthWebView> {
     try {
       await _clearWebViewSession();
       
+      final userAgent = Platform.isIOS
+          ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+          : 'Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+      
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1')
-        ..setNavigationDelegate(_createNavigationDelegate());
+        ..setUserAgent(userAgent)
+        ..setNavigationDelegate(_createNavigationDelegate())
+        ..enableZoom(false)
+        ..setBackgroundColor(Colors.white);
 
       await _controller!.loadRequest(Uri.parse(widget.authUrl));
       
