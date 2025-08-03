@@ -4,6 +4,7 @@ import 'package:lockity_flutter/core/app_text_styles.dart';
 import 'package:lockity_flutter/services/navigation_service.dart';
 import 'package:lockity_flutter/services/oauth_service.dart';
 import 'package:lockity_flutter/services/notification_service.dart';
+import 'package:lockity_flutter/services/user_service.dart'; // ✅ AGREGAR IMPORT
 import 'package:lockity_flutter/screens/activity_auth.dart';
 import 'package:lockity_flutter/components/app_scaffold.dart';
 
@@ -143,28 +144,28 @@ class _LogoutButtonState extends State<_LogoutButton> {
     setState(() => _isLoggingOut = true);
     
     try {
-      final navigator = Navigator.of(context);
+      print('🚪 Iniciando proceso de logout...');
       
       if (mounted) {
-        navigator.pop();
+        Navigator.of(context).pop();
+        print('✅ Drawer cerrado');
       }
       
-      final result = await OAuthService.logout();
+      await _clearAllLocalDataImmediately();
+      print('✅ Datos locales limpiados');
       
       if (mounted) {
-        _showLogoutNotification(result);
-        _navigateToAuth(navigator);
+        _navigateToAuthImmediate();
+        print('✅ Navegación iniciada');
       }
+      
+      _performServerLogoutInBackground();
       
     } catch (e) {
+      print('❌ Error en logout: $e');
       if (mounted) {
-        NotificationService.showError(
-          context,
-          'Logout Error',
-          subtitle: 'An unexpected error occurred',
-        );
-        
-        _navigateToAuth(Navigator.of(context));
+        await _clearAllLocalDataImmediately();
+        _navigateToAuthImmediate();
       }
     } finally {
       if (mounted) {
@@ -173,43 +174,57 @@ class _LogoutButtonState extends State<_LogoutButton> {
     }
   }
 
-  void _showLogoutNotification(LogoutResult result) {
-    if (result.isSuccess) {
-      if (result.status == LogoutStatus.success) {
-        NotificationService.showSuccess(
-          context,
-          'Logout Successful',
-          subtitle: 'You have been safely logged out',
-        );
-      } else if (result.status == LogoutStatus.partialSuccess) {
-        NotificationService.showWarning(
-          context,
-          'Partial Logout',
-          subtitle: 'Logged out locally, server may be unreachable',
-        );
-      }
-    } else {
-      NotificationService.showError(
-        context,
-        'Logout Failed',
-        subtitle: result.message,
-      );
+  Future<void> _clearAllLocalDataImmediately() async {
+    try {
+      UserService.clearCache();
+      
+      await OAuthService.clearAllData();
+      
+      print('✅ Todos los datos locales limpiados');
+    } catch (e) {
+      print('⚠️ Error limpiando datos locales: $e');
     }
   }
 
-  void _navigateToAuth(NavigatorState navigator) {
+  void _navigateToAuthImmediate() {
     try {
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const AppScaffold(
-            showDrawer: false,
-            body: ActivityAuth(showRegistrationSuccess: false),
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const AppScaffold(
+              showDrawer: false,
+              body: ActivityAuth(showRegistrationSuccess: false),
+            ),
           ),
-        ),
-        (route) => false,
-      );
+          (route) => false,
+        );
+        
+        print('✅ Navegación a auth completada');
+        
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            NotificationService.showSuccess(
+              context,
+              'Logout Successful',
+              subtitle: 'You have been safely logged out',
+            );
+          }
+        });
+      }
     } catch (e) {
-      // 
+      print('❌ Error navegando a auth: $e');
     }
+  }
+
+  void _performServerLogoutInBackground() {
+    Future(() async {
+      try {
+        print('🌐 Intentando logout del servidor...');
+        final result = await OAuthService.logout();
+        print('✅ Logout del servidor: ${result.message}');
+      } catch (e) {
+        print('⚠️ Error en logout del servidor: $e');
+      }
+    });
   }
 }

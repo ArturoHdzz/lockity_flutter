@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:lockity_flutter/core/app_config.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-
+import 'package:lockity_flutter/services/user_service.dart';
 class AuthToken {
   final String accessToken;
   final String? refreshToken;
@@ -452,6 +452,8 @@ class OAuthService {
       _tokenRepository.clearOAuthState(),
       _clearWebViewData(),
     ]);
+    
+    UserService.clearCache();
   }
 
   static Future<void> _clearWebViewData() async {
@@ -490,11 +492,19 @@ class OAuthService {
   }
 
   static Future<void> clearAllData() async {
-    await Future.wait([
-      _tokenRepository.clearToken(),
-      _tokenRepository.clearOAuthState(),
-      _clearWebViewData(),
-    ]);
+    try {
+      await Future.wait([
+        _tokenRepository.clearToken(),
+        _tokenRepository.clearOAuthState(),
+        _clearWebViewData(),
+      ]);
+      
+      UserService.clearCache();
+      
+      print('✅ OAuthService: Todos los datos limpiados');
+    } catch (e) {
+      print('⚠️ OAuthService: Error limpiando datos: $e');
+    }
   }
 
   static Future<void> _performWebLogoutWithCredentials() async {

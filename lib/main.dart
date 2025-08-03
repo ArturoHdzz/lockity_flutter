@@ -197,23 +197,31 @@ class _MyAppState extends State<MyApp> {
         child: FutureBuilder<bool>(
           future: _checkAuthWithTimeout(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingScreen(
-                message: 'Initializing Lockity',
-                subtitle: 'Verifying security credentials...',
-              );
+            switch (snapshot.connectionState) {
+              case ConnectionState.waiting:
+                return const LoadingScreen(
+                  message: 'Initializing Lockity',
+                  subtitle: 'Verifying security credentials...',
+                );
+              case ConnectionState.done:
+                if (snapshot.data == true) {
+                  NavigationService.setCurrentScreen(NavigationScreen.home);
+                  return const AppScaffold(
+                    showDrawer: true,
+                    body: HomeScreen(),
+                  );
+                } else {
+                  return const AppScaffold(
+                    showDrawer: false,
+                    body: ActivityAuth(showRegistrationSuccess: false),
+                  );
+                }
+              default:
+                return const AppScaffold(
+                  showDrawer: false,
+                  body: ActivityAuth(showRegistrationSuccess: false),
+                );
             }
-            if (snapshot.data == true) {
-              NavigationService.setCurrentScreen(NavigationScreen.home);
-              return const AppScaffold(
-                showDrawer: true,
-                body: HomeScreen(),
-              );
-            }
-            return const AppScaffold(
-              showDrawer: false,
-              body: ActivityAuth(),
-            );
           },
         ),
       ),
