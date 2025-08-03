@@ -62,9 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
           !_provider.isOperating) {
         
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          final status = _provider.compartmentStatus!.message;
-          if (ScaffoldMessenger.of(context).mounted) {
-            _showInfoSnackBar('Status updated: $status');
+          final compartmentStatus = _provider.compartmentStatus;
+          if (compartmentStatus != null && ScaffoldMessenger.of(context).mounted) {
+            _showInfoSnackBar('Status updated: ${compartmentStatus.message}');
           }
         });
       }
@@ -174,8 +174,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final success = await _provider.refreshCompartmentStatus();
     if (success) {
-      final status = _provider.compartmentStatus!.message;
-      _showSuccessSnackBar('Status updated: $status');
+      final compartmentStatus = _provider.compartmentStatus;
+      if (compartmentStatus != null) {
+        _showSuccessSnackBar('Status updated: ${compartmentStatus.message}');
+      }
     } else {
       _showErrorSnackBar('Failed to refresh compartment status');
     }
