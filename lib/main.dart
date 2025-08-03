@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lockity_flutter/services/fcm_token_storage.dart';
+import 'package:lockity_flutter/services/local_notification_service.dart';
 import 'package:lockity_flutter/services/push_notification_service.dart';
 import 'firebase_options.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,11 +18,21 @@ import 'package:lockity_flutter/services/navigation_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:lockity_flutter/services/button_cooldown_service.dart';
+import 'dart:convert';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('Mensaje recibido en segundo plano: ${message.messageId}');
+  print('📱 Mensaje en segundo plano: ${message.notification?.title}');
+  
+  if (message.notification != null) {
+    await LocalNotificationService.showNotification(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: message.notification!.title ?? 'Lockity',
+      body: message.notification!.body ?? 'Nueva notificación',
+      payload: jsonEncode(message.data),
+    );
+  }
 }
 
 Future<void> main() async {
@@ -38,12 +49,16 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
+    
+    await LocalNotificationService.initialize();
+    
     await ButtonCooldownService().initialize();
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    
+    print('✅ App inicializada correctamente');
   } catch (e) {
-    print('Error inicializando Firebase: $e');
+    print('❌ Error inicializando app: $e');
   }
 
   runApp(const MyApp());
@@ -61,96 +76,57 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeFirebaseMessagingAsync();
+      _initializeEverything();
     });
   }
 
-  void _initializeFirebaseMessagingAsync() async {
+  void _initializeEverything() async {
     try {
-      await _initializeFirebaseMessaging();
-    } catch (e) {
-      print('Error inicializando FCM: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error configurando notificaciones: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _initializeFirebaseMessaging() async {
-    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: true, 
-      sound: true,
-    );
-
-    print('Permisos de notificación: ${settings.authorizationStatus}');
-
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      await _waitForApnsTokenWithTimeout();
-    }
-
-    _setupMessageHandlers();
-    
-    await _getFCMTokenAsync();
-  }
-
-  Future<void> _waitForApnsTokenWithTimeout() async {
-    try {
-      print('Esperando token APNS...');
-      String? apnsToken;
-      int attempts = 0;
-      const maxAttempts = 5;
+      await LocalNotificationService.requestPermissions();
       
-      while (apnsToken == null && attempts < maxAttempts) {
-        apnsToken = await FirebaseMessaging.instance.getAPNSToken()
-            .timeout(const Duration(seconds: 2));
-        if (apnsToken != null) {
-          print('Token APNS obtenido correctamente');
-          break;
-        }
+      await _setupFirebaseMessaging();
+      
+      print('✅ Inicialización completa');
+    } catch (e) {
+      print('❌ Error en inicialización: $e');
+    }
+  }
+
+  Future<void> _setupFirebaseMessaging() async {
+    try {
+      String? token = await FirebaseMessaging.instance.getToken();
+      print('🔑 FCM Token: $token');
+      
+      if (token != null) {
+        _registerTokenInBackground(token);
+      }
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print('📨 Mensaje en primer plano: ${message.notification?.title}');
         
-        attempts++;
-        print('Intento $attempts/$maxAttempts - Esperando token APNS...');
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-      
-      if (apnsToken == null) {
-        print('Advertencia: No se pudo obtener el token APNS después de $maxAttempts intentos');
-      }
-    } catch (e) {
-      print('Error obteniendo APNS token: $e');
-    }
-  }
+        if (message.notification != null) {
+          LocalNotificationService.showNotification(
+            id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+            title: message.notification!.title ?? 'Lockity',
+            body: message.notification!.body ?? 'Nueva notificación',
+            payload: jsonEncode(message.data),
+          );
+        }
+      });
 
-  Future<void> _getFCMTokenAsync() async {
-    try {
-      String? newToken = await FirebaseMessaging.instance.getToken()
-          .timeout(const Duration(seconds: 10));
-          
-      print('Token FCM para pruebas: $newToken');
-      
-      if (newToken != null) {
-        _registerTokenInBackground(newToken);
-      }
-    } catch (e) {
-      print('Error obteniendo token FCM: $e');
-    }
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        print('📱 App abierta desde notificación');
+        _handleNotificationTap(message);
+      });
 
-    FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) async {
-      print('Token FCM actualizado: $fcmToken');
-      _registerTokenInBackground(fcmToken);
-    }).onError((err) {
-      print('Error obteniendo token: $err');
-    });
+      FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
+        print('🔄 Token actualizado: $fcmToken');
+        _registerTokenInBackground(fcmToken);
+      });
+      
+    } catch (e) {
+      print('❌ Error configurando FCM: $e');
+    }
   }
 
   void _registerTokenInBackground(String newToken) async {
@@ -175,73 +151,18 @@ class _MyAppState extends State<MyApp> {
         
         if (registered) {
           await FcmTokenStorage.saveToken(newToken);
-          print('Token FCM registrado correctamente');
+          print('✅ Token FCM registrado correctamente en backend');
         } else {
-          print('Error registrando el token FCM');
+          print('❌ Error registrando el token FCM en backend');
         }
       }
     } catch (e) {
-      print('Error registrando token FCM: $e');
-    }
-  }
-
-  void _setupMessageHandlers() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Mensaje recibido en primer plano: ${message.notification?.title}');
-      print('Mensaje recibido en primer plano: ${message.notification?.body}');
-      print('Mensaje recibido en primer plano: ${message.notification}');
-      
-      if (mounted) {
-        _handleForegroundMessage(message);
-      }
-    }, onError: (error) {
-      print('Error en onMessage: $error');
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('App abierta desde notificación: ${message.notification?.title}');
-      if (mounted) {
-        _handleNotificationTap(message);
-      }
-    }, onError: (error) {
-      print('Error en onMessageOpenedApp: $error');
-    });
-
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null && mounted) {
-        print('App iniciada desde notificación: ${message.notification?.title}');
-        _handleNotificationTap(message);
-      }
-    }).catchError((error) {
-      print('Error en getInitialMessage: $error');
-    });
-  }
-
-  void _handleForegroundMessage(RemoteMessage message) {
-    if (message.notification != null) {
-      _showInAppNotification(message);
-    } else {
-      print('Push recibida pero sin contenido de notificación.');
-    }
-  }
-
-  void _showInAppNotification(RemoteMessage message) {
-    if (mounted && ScaffoldMessenger.maybeOf(context) != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message.notification?.title ?? 'Nueva notificación',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      print('❌ Error registrando token FCM: $e');
     }
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    print('Procesando tap en notificación: ${message.data}');
+    print('👆 Procesando tap en notificación: ${message.data}');
     
     Future.microtask(() {
       if (message.data.containsKey('screen')) {
