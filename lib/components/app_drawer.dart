@@ -189,25 +189,26 @@ class _LogoutButtonState extends State<_LogoutButton> {
   void _navigateToAuthImmediate() {
     try {
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const AppScaffold(
-              showDrawer: false,
-              body: ActivityAuth(showRegistrationSuccess: false),
-            ),
-          ),
-          (route) => false,
+        NotificationService.showSuccess(
+          context,
+          'Logout Successful',
+          subtitle: 'You have been safely logged out',
+          duration: const Duration(seconds: 3),
         );
         
-        print('✅ Navegación a auth completada');
-        
-        Future.delayed(const Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) {
-            NotificationService.showSuccess(
-              context,
-              'Logout Successful',
-              subtitle: 'You have been safely logged out',
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const AppScaffold(
+                  showDrawer: false,
+                  body: ActivityAuth(showRegistrationSuccess: false),
+                ),
+              ),
+              (route) => false,
             );
+            
+            print('✅ Navegación a auth completada');
           }
         });
       }
