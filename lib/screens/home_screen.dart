@@ -713,19 +713,19 @@ class _HomeScreenState extends State<HomeScreen> {
       buttonColor = Colors.grey.shade400;
     }
     
-    String buttonText;
-    if (isInCooldown) {
-      buttonText = screenWidth < 360 ? cooldownTime : 'Wait $cooldownTime';
-    } else if (isRefreshing) {
-      buttonText = 'Checking...';
-    } else if (isOperating) {
-      buttonText = 'Operating...';
-    } else if (compartmentStatus?.isOpen == true) {
-      buttonText = 'Open';
-    } else if (compartmentStatus?.isClosed == true) {
-      buttonText = 'Closed';
-    } else {
-      buttonText = 'Unknown';
+    String? buttonText;
+    if (!isInCooldown) {
+      if (isRefreshing) {
+        buttonText = 'Checking...';
+      } else if (isOperating) {
+        buttonText = 'Operating...';
+      } else if (compartmentStatus?.isOpen == true) {
+        buttonText = 'Open';
+      } else if (compartmentStatus?.isClosed == true) {
+        buttonText = 'Closed';
+      } else {
+        buttonText = 'Unknown';
+      }
     }
 
     return Column(
@@ -777,53 +777,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         
-        SizedBox(height: _getResponsiveSpacing(context, 16)),
-        
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            buttonText,
-            style: AppTextStyles.headingSmall.copyWith(
-              color: canOperate && !isInCooldown ? AppColors.text : AppColors.text.withOpacity(0.5),
-              fontWeight: FontWeight.w600,
-              fontSize: screenWidth < 360 ? 16 : null,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        
-        if (isInCooldown) ...[
-          SizedBox(height: _getResponsiveSpacing(context, 8)),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth < 360 ? 8 : 12, 
-              vertical: 6
-            ),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.timer,
-                  size: screenWidth < 360 ? 14 : 16,
-                  color: Colors.orange.shade600,
-                ),
-                SizedBox(width: screenWidth < 360 ? 4 : 6),
-                Flexible(
-                  child: Text(
-                    screenWidth < 360 ? 'Auto-update' : 'Auto-update when ready',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.orange.shade600,
-                      fontWeight: FontWeight.w500,
-                      fontSize: screenWidth < 360 ? 11 : null,
-                    ),
-                  ),
-                ),
-              ],
+        if (buttonText != null) ...[
+          SizedBox(height: _getResponsiveSpacing(context, 16)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              buttonText,
+              style: AppTextStyles.headingSmall.copyWith(
+                color: canOperate && !isInCooldown ? AppColors.text : AppColors.text.withOpacity(0.5),
+                fontWeight: FontWeight.w600,
+                fontSize: screenWidth < 360 ? 16 : null,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
