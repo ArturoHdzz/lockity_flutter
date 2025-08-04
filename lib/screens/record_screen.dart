@@ -24,23 +24,11 @@ class _RecordScreenState extends State<RecordScreen> {
   late final AuditLogProvider _provider;
   final _scrollController = ScrollController();
   
-  final List<String> _filterOptions = [
-    'All Records',
-    'Today',
-    'Last 7 days',
-    'Last 30 days',
-  ];
-
-  String? _selectedFilter;
-  DateTime? _selectedDateFrom;
-  DateTime? _selectedDateTo;
-
   @override
   void initState() {
     super.initState();
     _initializeProvider();
     _setupScrollListener();
-    _selectedFilter = _filterOptions.first;
     _loadAuditLogs();
   }
 
@@ -72,8 +60,6 @@ class _RecordScreenState extends State<RecordScreen> {
   Future<void> _loadAuditLogs() async {
     print('[RecordScreen] Serial recibido: ${widget.lockerSerialNumber}');
     final request = AuditLogRequest(
-      dateFrom: _selectedDateFrom,
-      dateTo: _selectedDateTo,
       lockerSerialNumber: widget.lockerSerialNumber,
     );
     await _provider.loadAuditLogs(request: request);
@@ -83,39 +69,6 @@ class _RecordScreenState extends State<RecordScreen> {
     if (_provider.canLoadMore) {
       await _provider.loadMore();
     }
-  }
-
-  Future<void> _handleFilterChange(String? value) async {
-    if (value == null || value == _selectedFilter) return;
-
-    setState(() => _selectedFilter = value);
-
-    DateTime? dateFrom;
-    DateTime? dateTo;
-    final now = DateTime.now();
-
-    switch (value) {
-      case 'Today':
-        dateFrom = DateTime(now.year, now.month, now.day);
-        dateTo = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        break;
-      case 'Last 7 days':
-        dateFrom = now.subtract(const Duration(days: 7));
-        dateTo = now;
-        break;
-      case 'Last 30 days':
-        dateFrom = now.subtract(const Duration(days: 30));
-        dateTo = now;
-        break;
-      default:
-        dateFrom = null;
-        dateTo = null;
-    }
-
-    _selectedDateFrom = dateFrom;
-    _selectedDateTo = dateTo;
-
-    await _loadAuditLogs();
   }
 
   Future<void> _handleRefresh() async {
@@ -225,8 +178,6 @@ class _RecordScreenState extends State<RecordScreen> {
               SizedBox(height: _getResponsiveSpacing(context, 8)),
               _buildHeader(),
               SizedBox(height: _getResponsiveSpacing(context, 16)),
-              _buildFilterDropdown(),
-              SizedBox(height: _getResponsiveSpacing(context, 16)),
               Expanded(child: _buildContent()),
             ],
           ),
@@ -280,15 +231,6 @@ class _RecordScreenState extends State<RecordScreen> {
                 ),
             ],
           );
-  }
-
-  Widget _buildFilterDropdown() {
-    return CustomDropdown(
-      value: _selectedFilter,
-      items: _filterOptions,
-      hint: 'Select Time Range',
-      onChanged: _handleFilterChange,
-    );
   }
 
   Widget _buildContent() {
@@ -365,9 +307,7 @@ class _RecordScreenState extends State<RecordScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedFilter == 'All Records' 
-                ? 'No audit logs available'
-                : 'No records found for the selected time range',
+              'No audit logs available',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.text.withOpacity(0.5),
                 fontSize: screenWidth < 360 ? 11 : null,
