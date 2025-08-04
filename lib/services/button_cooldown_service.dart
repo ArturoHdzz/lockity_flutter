@@ -118,6 +118,8 @@ class ButtonCooldownService extends ChangeNotifier {
     
     print('✅ Cooldown completado - Botón habilitado');
     
+    notifyListeners();
+    
     if (_onCooldownFinished != null) {
       try {
         print('🔄 Actualizando estado del compartimento después del cooldown...');
@@ -128,7 +130,7 @@ class ButtonCooldownService extends ChangeNotifier {
       }
     }
     
-    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 50));
   }
   
   Future<void> _clearCooldown() async {

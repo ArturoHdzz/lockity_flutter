@@ -19,7 +19,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final LockerProvider _provider;
-  final MqttConnectionManager _mqttManager = MqttConnectionManager(); 
+  final MqttConnectionManager _mqttManager = MqttConnectionManager();
+  
+  String? _lastNotificationMessage;
+  DateTime? _lastNotificationTime;
+  static const Duration _notificationCooldown = Duration(seconds: 3);
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -46,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _provider.removeListener(_onProviderStateChanged);
     _provider.dispose();
     _mqttManager.dispose();
@@ -53,22 +59,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onProviderStateChanged() {
-    if (mounted) {
-      setState(() {});
+    if (_isDisposed || !mounted) return;
+    
+    setState(() {});
+    
+    if (_provider.compartmentStatus != null && 
+        !_provider.isInCooldown && 
+        !_provider.isRefreshingStatus &&
+        !_provider.isOperating &&
+        _shouldShowStatusNotification()) {
       
-      if (_provider.compartmentStatus != null && 
-          !_provider.isInCooldown && 
-          !_provider.isRefreshingStatus &&
-          !_provider.isOperating) {
-        
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed && mounted) { 
           final compartmentStatus = _provider.compartmentStatus;
-          if (compartmentStatus != null && ScaffoldMessenger.of(context).mounted) {
-            _showInfoSnackBar('Status updated: ${compartmentStatus.message}');
+          if (compartmentStatus != null) {
+            final message = 'Status updated: ${compartmentStatus.message}';
+            _showInfoSnackBar(message);
+            _updateLastNotification(message);
           }
-        });
-      }
+        }
+      });
     }
+  }
+
+  bool _shouldShowStatusNotification() {
+    final compartmentStatus = _provider.compartmentStatus;
+    if (compartmentStatus == null) return false;
+    
+    final currentMessage = 'Status updated: ${compartmentStatus.message}';
+    final now = DateTime.now();
+    
+    if (_lastNotificationMessage == currentMessage && 
+        _lastNotificationTime != null &&
+        now.difference(_lastNotificationTime!) < _notificationCooldown) {
+      return false;
+    }
+    
+    return true;
   }
 
   Future<void> _handleOpen() async {
@@ -149,6 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    _updateLastNotification('Status updated: checking...');
+
     final hasStatus = await _provider.refreshCompartmentStatus();
     if (!hasStatus) {
       _showErrorSnackBar('Failed to get current compartment status');
@@ -156,6 +185,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final status = _provider.compartmentStatus!;
+    
+    _updateLastNotification('Status updated: ${status.message}');
+    
     final success = await _provider.toggleSelectedCompartment();
 
     if (success) {
@@ -176,7 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (success) {
       final compartmentStatus = _provider.compartmentStatus;
       if (compartmentStatus != null) {
-        _showSuccessSnackBar('Status updated: ${compartmentStatus.message}');
+        final message = 'Status refreshed: ${compartmentStatus.message}'; // 🔧 Cambiar texto
+        _showSuccessSnackBar(message);
+        _updateLastNotification('Status updated: ${compartmentStatus.message}');
       }
     } else {
       _showErrorSnackBar('Failed to refresh compartment status');
@@ -184,6 +218,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showSuccessSnackBar(String message) {
+    if (!mounted || _isDisposed) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -194,6 +230,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted || _isDisposed) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -214,6 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showInfoSnackBar(String message) {
+    if (!mounted || _isDisposed) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -231,6 +271,11 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  void _updateLastNotification(String message) {
+    _lastNotificationMessage = message;
+    _lastNotificationTime = DateTime.now();
   }
 
   EdgeInsets _getResponsivePadding(BuildContext context) {
