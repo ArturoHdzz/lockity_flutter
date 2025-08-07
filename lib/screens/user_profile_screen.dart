@@ -83,20 +83,85 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: _provider.isUpdating
+        ? const Center(child: CircularProgressIndicator(color: AppColors.buttons))
+        : _provider.isInCooldown
+            ? _buildCooldownButton()
+            : CustomButton(
+                text: 'Save Changes',
+                onPressed: _provider.canUpdate ? _handleSave : null,
+                isEnabled: _provider.canUpdate,
+              ),
+    );
+  }
+
+  Widget _buildCooldownButton() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.secondary.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.schedule,
+              color: AppColors.text.withOpacity(0.7),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Available in ${_provider.cooldownFormattedTime}',
+              style: AppTextStyles.button.copyWith(
+                color: AppColors.text.withOpacity(0.7),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showSuccessMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('Profile updated successfully'),
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Profile updated successfully'),
+                  Text(
+                    'Next update available in 30 minutes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -474,15 +539,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: color, width: width),
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: _provider.isUpdating
-        ? const Center(child: CircularProgressIndicator(color: AppColors.buttons))
-        : CustomButton(text: 'Save Changes', onPressed: _handleSave),
     );
   }
 }

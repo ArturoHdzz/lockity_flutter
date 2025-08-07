@@ -4,18 +4,24 @@ import 'package:lockity_flutter/models/user.dart';
 import 'package:lockity_flutter/models/user_update_request.dart';
 import 'package:lockity_flutter/use_cases/get_current_user_use_case.dart';
 import 'package:lockity_flutter/use_cases/update_user_use_case.dart';
+import 'package:lockity_flutter/services/user_update_cooldown_service.dart';
 
 enum UserProfileState { initial, loading, loaded, updating, updated, error }
 
 class UserProfileProvider extends ChangeNotifier {
   final GetCurrentUserUseCase _getCurrentUserUseCase;
   final UpdateUserUseCase _updateUserUseCase;
+  final UserUpdateCooldownService _cooldownService;
 
   UserProfileProvider({
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required UpdateUserUseCase updateUserUseCase,
+    UserUpdateCooldownService? cooldownService,
   }) : _getCurrentUserUseCase = getCurrentUserUseCase,
-       _updateUserUseCase = updateUserUseCase;
+       _updateUserUseCase = updateUserUseCase,
+       _cooldownService = cooldownService ?? UserUpdateCooldownService() {
+    _initializeCooldown();
+  }
 
   UserProfileState _state = UserProfileState.initial;
   User? _user;
@@ -29,6 +35,22 @@ class UserProfileProvider extends ChangeNotifier {
   bool get isUpdating => _state == UserProfileState.updating;
   bool get hasError => _state == UserProfileState.error;
   bool get hasUser => _user != null;
+  
+  bool get canUpdate => !_cooldownService.isInCooldown && !isUpdating;
+  bool get isInCooldown => _cooldownService.isInCooldown;
+  int get remainingMinutes => _cooldownService.remainingMinutes;
+  String get cooldownFormattedTime => _cooldownService.formattedTime;
+
+  void _initializeCooldown() {
+    _cooldownService.addListener(_onCooldownChanged);
+    _cooldownService.initialize();
+  }
+
+  void _onCooldownChanged() {
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
 
   Future<void> loadUserProfile() async {
     if (_state == UserProfileState.loading || _disposed) return;
@@ -53,7 +75,7 @@ class UserProfileProvider extends ChangeNotifier {
     required String lastName,
     required String secondLastName,
   }) async {
-    if (_state == UserProfileState.updating || _disposed) return false;
+    if (!canUpdate || _disposed) return false;
 
     _setState(UserProfileState.updating);
     _clearError();
@@ -69,6 +91,8 @@ class UserProfileProvider extends ChangeNotifier {
       
       if (!_disposed) {
         _setState(UserProfileState.updated);
+        
+        await _cooldownService.startCooldown();
         
         Timer.run(() {
           if (!_disposed && _state == UserProfileState.updated) {
@@ -129,6 +153,7 @@ class UserProfileProvider extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _cooldownService.removeListener(_onCooldownChanged);
     super.dispose();
   }
 }
